@@ -183,10 +183,3 @@ Optional backend:
 - Direct backend PDF download requires the optional API to be running.
 - Automated tests have not been added yet.
 
-## Future Improvements
-
-- Save resume data locally
-- Add more resume templates
-- Add screenshots and a live demo link
-- Add automated tests
-- Split larger frontend components as the project grows
