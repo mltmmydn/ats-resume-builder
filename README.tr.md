@@ -183,10 +183,3 @@ Opsiyonel backend:
 - Doğrudan backend PDF indirme özelliği için opsiyonel API'nin çalışıyor olması gerekir.
 - Henüz otomatik testler eklenmemiştir.
 
-## Gelecekte Eklenebilecekler
-
-- Özgeçmiş verilerini local olarak saklama
-- Yeni özgeçmiş şablonları
-- Ekran görüntüleri ve canlı demo bağlantısı
-- Otomatik testler
-- Proje büyüdükçe büyük frontend bileşenlerini daha küçük parçalara ayırma
