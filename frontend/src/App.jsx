@@ -163,44 +163,59 @@ const referenceTranslations = {
 
 const initialResume = {
   personal: {
-    fullName: 'Alex Morgan',
+    fullName: 'Alex Carter',
     jobTitle: 'Software Engineer',
-    email: 'alex.morgan@example.com',
-    phone: '+1 555 123 4567',
+    email: 'alex.carter@example.com',
+    phone: '+1 555 010 1234',
     location: 'Seattle, WA',
-    linkedin: 'linkedin.com/in/alexmorgan',
-    github: 'github.com/alexmorgan',
-    portfolio: '',
-    customFields: [{ label: 'Portfolio', value: 'alexmorgan.dev' }],
+    linkedin: 'linkedin.example.com/alex-carter',
+    github: 'github.example.com/alex-carter',
+    portfolio: 'alex-carter.example.com',
+    customFields: [
+      { label: 'Website', value: 'alex-carter.example.com' },
+      { label: 'Medium', value: 'medium.example.com/alex-carter' },
+      { label: 'LeetCode', value: 'leetcode.example.com/alex-carter' },
+    ],
     summary:
-      'Software engineer with 5+ years of experience building reliable web applications and scalable APIs. Skilled in React, TypeScript, Node.js, and cloud-native development with a strong focus on clean code and measurable product impact.',
+      'Software engineer experienced in building reliable web applications and APIs, with a focus on maintainable code, collaboration, and practical product improvements.',
   },
   experiences: [
     {
-      company: 'Northstar Technologies',
+      company: 'Northstar Software Studio',
       title: 'Senior Software Engineer',
       location: 'Seattle, WA',
       startDate: 'Jan 2023',
       endDate: '',
       currentlyWorking: true,
       responsibilities:
-        'Led development of a React analytics platform used by 10,000+ customers\nReduced API response time by 40% through caching and query optimization\nMentored four engineers and introduced automated code quality checks',
+        'Led development of a customer analytics platform\nImproved API performance through caching and query optimization\nMentored engineers and introduced automated quality checks',
     },
     {
-      company: 'Bright Labs',
+      company: 'Bright Harbor Labs',
       title: 'Software Engineer',
       location: 'Portland, OR',
       startDate: 'Jun 2020',
       endDate: 'Dec 2022',
       currentlyWorking: false,
       responsibilities:
-        'Built and maintained TypeScript services processing 2M+ daily events\nIncreased test coverage from 55% to 88% across core services',
+        'Built and maintained TypeScript services for internal products\nExpanded automated test coverage across core services',
     },
   ],
-  volunteerExperiences: [],
+  volunteerExperiences: [
+    {
+      organizationName: 'Youth Tech Community',
+      role: 'Volunteer Mentor',
+      location: 'Seattle, WA',
+      startDate: '2021',
+      endDate: '2022',
+      isCurrent: false,
+      responsibilities:
+        'Supported beginner-friendly coding workshops\nHelped organize community learning sessions',
+    },
+  ],
   education: [
     {
-      school: 'University of Washington',
+      school: 'Example Institute of Technology',
       degree: 'Bachelor of Science',
       department: 'Computer Science',
       startDate: '2016',
@@ -210,9 +225,9 @@ const initialResume = {
   ],
   projects: [
     {
-      name: 'Developer Metrics Dashboard',
+      name: 'Team Insights Dashboard',
       description:
-        'Built an open-source dashboard that helps engineering teams track delivery performance and identify workflow bottlenecks.',
+        'Built a dashboard that helps teams review delivery trends and identify workflow bottlenecks.',
       technologies: 'React, TypeScript, Node.js, PostgreSQL, Docker',
     },
   ],
@@ -234,11 +249,11 @@ const initialResume = {
   ],
   certificates: [
     {
-      name: 'AWS Certified Solutions Architect - Associate',
-      issuer: 'Amazon Web Services',
+      name: 'Cloud Application Architecture',
+      issuer: 'Example Learning Institute',
       date: '2024',
       details:
-        'Designing resilient architectures\nDesigning high-performing architectures\nDesigning secure applications and architectures',
+        'Resilient application design\nCloud security fundamentals\nPerformance and scalability',
     },
   ],
   referenceMode: 'uponRequest',

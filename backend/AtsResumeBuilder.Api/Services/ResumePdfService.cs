@@ -92,7 +92,7 @@ public class ResumePdfService : IResumePdfService
         if (populatedOptionalContacts.Length > 0)
             column.Item().AlignCenter().Text(string.Join(" | ", populatedOptionalContacts)).FontSize(9);
 
-        column.Item().PaddingTop(5).BorderBottom(1).BorderColor(Colors.Black);
+        column.Item().PaddingTop(5).BorderBottom(1).BorderColor(Colors.Grey.Medium);
     }
 
     private static void AddSummary(ColumnDescriptor column, string? summary)

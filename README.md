@@ -1,81 +1,100 @@
 # ATS Resume Builder
 
-ATS Resume Builder is a resume creation application designed to make CV preparation simpler, cleaner, and more accessible.
+ATS Resume Builder is a simple resume creation tool that helps people focus on their experience and skills instead of spending time learning a complicated editor.
 
-I built this project after noticing that creating a resume can sometimes become unnecessarily complicated. Many tools offer too many visual options, make the process harder than expected, or place basic export features behind paid steps.
+For Turkish documentation, see [README.tr.md](README.tr.md).
 
-The idea behind this project is simple:
+The flow is intentionally straightforward:
 
-```text
-Fill in your resume information
-Preview it instantly
-Choose a suitable template
-Save it as a PDF
-```
+1. Fill in your resume information.
+2. Preview changes instantly.
+3. Choose a suitable template.
+4. Export or save the resume as a PDF.
 
-The main goal is to help users create a clean and readable resume without losing focus on the content.
+## Why I Built This
 
-## What This Project Does
+Finding the right resume format, keeping it ATS-friendly, and avoiding unnecessary design complexity can often be harder than expected.
 
-With this application, users can:
+I first noticed this need while helping a friend prepare a CV. As the process continued, I realized that this was not only a one-person problem, but something that could be simplified and made useful for many people.
 
-- Fill in personal information
-- Add work experience, education, projects, skills, languages, certificates, and references
-- Add optional custom fields such as Portfolio, Website, Medium, or LeetCode
-- Choose between an ATS-friendly template and a modern template with photo
-- Switch between English and Turkish interface labels
-- Preview the resume instantly while editing
-- Save the resume as a PDF through the browser print dialog
+Many resume builder tools include too many visual options, confusing flows, or paid steps just to export a completed document as a PDF. With this project, my goal was to create a simpler, more accessible flow that keeps the content at the center.
 
-The ATS-friendly template is intentionally simple. It avoids unnecessary visual complexity and focuses on a clean, single-column layout.
-
-## Why I Built It
-
-This project started from a practical need.
-
-While helping with resume preparation, I realized that many people do not need a complex design tool. They mostly need a clear structure, editable sections, and a format that is easy to read.
-
-So I wanted to build a tool that keeps the process simple:
-
-- no unnecessary design clutter
-- no forced photo usage
-- no required GitHub or portfolio field
-- no complicated editor flow
-- no paid step just to create a basic PDF
-
-## Current Status
-
-The main application is the React frontend.
-
-The frontend handles the resume form, live preview, template selection, photo preview, references, language selection, and browser-based PDF saving.
-
-The .NET 8 QuestPDF API remains available as an optional direct PDF download service. The frontend can also be deployed by itself without hosting the backend.
+Based on this idea, I built **ATS Resume Builder**, a web application that allows users to enter their resume information, edit it through a live preview, optionally add a profile photo, and save the result as a PDF in an ATS-friendly format.
 
 ## Features
 
-- Live resume preview
-- ATS-friendly resume template
-- Optional modern photo template
-- Dynamic resume sections
-- Optional references section
-- Optional custom contact fields
-- English and Turkish interface support
-- Light and dark mode for the application UI
-- Browser-based PDF export
-- Optional direct PDF download through the .NET backend
+- Live resume preview while editing
+- Clean, single-column ATS-friendly template
+- Modern template with an optional profile photo
+- English and Turkish interface labels
+- Light and dark application themes
+- Dynamic work experience and volunteer experience sections
+- Education, projects, and profession-neutral skill categories
+- Languages and certificates with optional details or topics
+- Optional references and custom personal fields
+- Custom fields for links or details such as Portfolio, Website, Medium, or LeetCode
+- Browser-based **Save as PDF**
+- Optional direct PDF generation through the local .NET backend
 - Responsive layout
+
+For the best ATS compatibility, the ATS-friendly template stays simple, text-focused, and does not include a photo.
+
+## PDF Export
+
+The project supports two export modes.
+
+### Frontend-Only Mode
+
+When `VITE_API_BASE_URL` is not configured, the application shows a **Save as PDF** button. This opens the browser print dialog, where the resume can be saved as a PDF.
+
+The Modern With Photo template keeps the selected profile photo in the browser-generated PDF. The ATS-friendly template does not show or export a photo.
+
+### Optional Backend Mode
+
+The repository also includes a .NET 8 backend built with QuestPDF. It provides direct PDF generation and enables the **Download PDF** action when the frontend is configured with:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+The backend is optional. It remains in the repository as a local development and reference implementation, but the live frontend does not depend on it.
+
+## Live Deployment
+
+The frontend is deployed on Cloudflare Pages. Cloudflare hosts the React/Vite application without separately hosting the .NET backend.
+
+This is intentional: it keeps the live demo simple, free to host, and available without requiring another backend service. In production, `VITE_API_BASE_URL` is left unset, so PDF saving uses the browser's **Save as PDF** flow.
+
+Cloudflare Pages settings:
+
+```text
+Root directory: frontend
+Build command: npm run build
+Output directory: dist
+VITE_API_BASE_URL: leave unset
+```
+
+## Screenshots
+
+Screenshots will be added here.
+
+Suggested folder: `docs/screenshots/`
 
 ## Project Structure
 
 ```text
 ats-resume-builder/
 |-- frontend/                     React + Vite application
-|-- backend/                      .NET 8 QuestPDF API
+|-- backend/
+|   `-- AtsResumeBuilder.Api/     Optional .NET 8 QuestPDF API
 |-- .gitignore
-`-- README.md
+|-- README.md
+`-- README.tr.md
 ```
 
-## Run the Frontend
+## Run Locally
+
+### Frontend
 
 Requirements:
 
@@ -90,17 +109,9 @@ npm run dev
 
 Open the local URL printed by Vite.
 
-By default, the frontend runs in frontend-only mode. Its **Save as PDF** button opens the browser print dialog.
+Without an environment variable, the frontend runs by itself and uses browser **Save as PDF**.
 
-To enable direct PDF downloads through the existing .NET backend, create `frontend/.env.local`:
-
-```env
-VITE_API_BASE_URL=http://localhost:5000
-```
-
-Restart the Vite development server after changing environment variables.
-
-## Run the Backend
+### Optional Backend
 
 Requirements:
 
@@ -112,27 +123,25 @@ dotnet restore
 dotnet run
 ```
 
+To enable direct PDF downloads locally, create `frontend/.env.local`:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+Restart the Vite development server after changing environment variables.
+
+The backend API runs at:
+
+```text
+http://localhost:5000
+```
+
 Swagger is available at:
 
 ```text
 http://localhost:5000/swagger
 ```
-
-Running the backend is optional unless `VITE_API_BASE_URL` is configured in the frontend.
-
-## Cloudflare Pages
-
-The React frontend can be deployed to Cloudflare Pages without hosting the .NET backend:
-
-```text
-Root directory: frontend
-Build command: npm run build
-Output directory: dist
-```
-
-Do not configure `VITE_API_BASE_URL` for a frontend-only deployment. The application will show one **Save as PDF** action that uses the browser print dialog.
-
-If a separately hosted compatible backend is available later, set `VITE_API_BASE_URL` to its public base URL to enable **Download PDF**.
 
 ## Validation
 
@@ -148,29 +157,10 @@ Backend:
 
 ```bash
 cd backend/AtsResumeBuilder.Api
-dotnet restore
 dotnet build
 ```
 
-## PDF Export
-
-Frontend-only mode:
-
-1. Complete the resume form and select a template.
-2. Click **Save as PDF**.
-3. Choose **Save as PDF** or **Microsoft Print to PDF** in the browser print dialog.
-4. Save the file.
-
-The Modern With Photo template includes the uploaded profile photo in browser print output.
-
-Backend-enabled mode:
-
-- **Download PDF** generates a PDF through the configured .NET API.
-- **Print** remains available in the bottom export section as a browser print fallback.
-
-For best ATS compatibility, use the ATS-friendly template without a photo.
-
-## Tech Stack
+## Technology
 
 Frontend:
 
@@ -179,7 +169,7 @@ Frontend:
 - JavaScript
 - CSS
 
-Backend:
+Optional backend:
 
 - ASP.NET Core Web API
 - .NET 8
@@ -188,19 +178,15 @@ Backend:
 
 ## Known Limitations
 
-- Resume data is not saved after page refresh.
-- Browser print export depends on the browser print engine.
-- Direct PDF download is available only when `VITE_API_BASE_URL` points to a running backend API.
+- Resume data is not saved after a page refresh.
+- Browser PDF output can vary slightly between browsers.
+- Direct backend PDF download requires the optional API to be running.
 - Automated tests have not been added yet.
 
 ## Future Improvements
 
-- Save resume data locally or through a backend
-- Split large React files into smaller components
-- Add more templates
+- Save resume data locally
+- Add more resume templates
 - Add screenshots and a live demo link
 - Add automated tests
-
-## License
-
-No license has been selected yet.
+- Split larger frontend components as the project grows
