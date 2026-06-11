@@ -440,6 +440,16 @@ class SafePaginatedPreview extends Component {
   render() {
     const { children, className = '', pageLabel } = this.props
 
+    if (isSafePreviewMode()) {
+      return (
+        <div className="resume-preview-stack simple-preview-stack">
+          <article className={`resume-preview simple-resume-preview ${className}`.trim()}>
+            <p>Preview is simplified on Safari for stability.</p>
+          </article>
+        </div>
+      )
+    }
+
     if (this.state.hasError) {
       return <SimplePreview className={className}>{children}</SimplePreview>
     }
@@ -451,7 +461,6 @@ class SafePaginatedPreview extends Component {
     )
   }
 }
-
 function PaginatedPreview({ children, className = '', pageLabel }) {
   if (isSafePreviewMode()) {
     return <SimplePreview className={className}>{children}</SimplePreview>
