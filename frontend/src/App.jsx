@@ -921,7 +921,29 @@ function App() {
       // The selected theme still works when browser storage is unavailable.
     }
   }, [theme])
+  if (isSafePreviewMode()) {
+    return (
+      <main className={`app-shell ${theme === 'dark' ? 'dark-theme' : ''}`}>
+        <aside className="editor-panel">
+          <div className="editor-header">
+            <div>
+              <p className="eyebrow">Safari safe mode</p>
+              <h1>ATS Resume Builder</h1>
+              <p>The app is running in simplified Safari mode.</p>
+            </div>
+          </div>
 
+          <div className="document-actions-section">
+            <p className="document-actions-label">Status</p>
+            <p>
+              If you can see this screen on iPhone, the crash is inside the full editor
+              or resume preview UI.
+            </p>
+          </div>
+        </aside>
+      </main>
+    )
+  }
   const clearPhoto = () => {
     setProfilePhoto('')
     setPhotoInputKey((current) => current + 1)
