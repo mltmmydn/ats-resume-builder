@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '') || ''
@@ -465,6 +465,128 @@ function TemplateSelector({ template, onChange, t }) {
           {option.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+function ReferenceModeDropdown({ value, onChange, t }) {
+  const options = [
+    { value: 'none', label: t('Do not include references') },
+    { value: 'uponRequest', label: t('References available upon request') },
+    { value: 'contacts', label: t('Add reference contacts') },
+  ]
+  const containerRef = useRef(null)
+  const optionRefs = useRef([])
+  const [isOpen, setIsOpen] = useState(false)
+  const selectedIndex = Math.max(
+    options.findIndex((option) => option.value === value),
+    0,
+  )
+  const [activeIndex, setActiveIndex] = useState(selectedIndex)
+  const selectedOption = options.find((option) => option.value === value) || options[0]
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!containerRef.current?.contains(event.target)) setIsOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handleOutsideClick)
+    return () => document.removeEventListener('pointerdown', handleOutsideClick)
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    optionRefs.current[activeIndex]?.focus()
+  }, [activeIndex, isOpen])
+
+  const openMenu = () => {
+    setActiveIndex(selectedIndex)
+    setIsOpen(true)
+  }
+
+  const chooseOption = (option) => {
+    onChange(option.value)
+    setIsOpen(false)
+  }
+
+  const moveActiveOption = (direction) => {
+    const nextIndex = (activeIndex + direction + options.length) % options.length
+    setActiveIndex(nextIndex)
+    optionRefs.current[nextIndex]?.focus()
+  }
+
+  const handleButtonKeyDown = (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      openMenu()
+    }
+  }
+
+  const handleMenuKeyDown = (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      moveActiveOption(1)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      moveActiveOption(-1)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      setActiveIndex(0)
+      optionRefs.current[0]?.focus()
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      const lastIndex = options.length - 1
+      setActiveIndex(lastIndex)
+      optionRefs.current[lastIndex]?.focus()
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      setIsOpen(false)
+      containerRef.current?.querySelector('.reference-dropdown-trigger')?.focus()
+    }
+  }
+
+  return (
+    <div className="reference-mode-field" ref={containerRef}>
+      <span className="reference-dropdown-label">{t('Reference display')}</span>
+      <button
+        type="button"
+        className="reference-dropdown-trigger"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-controls="reference-mode-options"
+        onClick={() => (isOpen ? setIsOpen(false) : openMenu())}
+        onKeyDown={handleButtonKeyDown}
+      >
+        <span>{selectedOption.label}</span>
+        <span className="reference-dropdown-chevron" aria-hidden="true" />
+      </button>
+      {isOpen && (
+        <div
+          className="reference-dropdown-menu"
+          id="reference-mode-options"
+          role="listbox"
+          aria-label={t('Reference display')}
+          onKeyDown={handleMenuKeyDown}
+        >
+          {options.map((option, index) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              className={option.value === value ? 'selected' : ''}
+              key={option.value}
+              ref={(element) => {
+                optionRefs.current[index] = element
+              }}
+              onClick={() => chooseOption(option)}
+              onFocus={() => setActiveIndex(index)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -1282,19 +1404,13 @@ function App() {
           </FormSection>
 
           <FormSection title={t('References')}>
-            <label className="field reference-mode-field">
-              <span>{t('Reference display')}</span>
-              <select
-                value={resume.referenceMode}
-                onChange={(event) =>
-                  setResume((current) => ({ ...current, referenceMode: event.target.value }))
-                }
-              >
-                <option value="none">{t('Do not include references')}</option>
-                <option value="uponRequest">{t('References available upon request')}</option>
-                <option value="contacts">{t('Add reference contacts')}</option>
-              </select>
-            </label>
+            <ReferenceModeDropdown
+              value={resume.referenceMode}
+              onChange={(referenceMode) =>
+                setResume((current) => ({ ...current, referenceMode }))
+              }
+              t={t}
+            />
 
             {resume.referenceMode === 'contacts' && (
               <div className="reference-form-list">

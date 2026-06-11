@@ -103,29 +103,6 @@ body {
   box-shadow: 0 3px 8px rgba(79, 70, 229, 0.18);
 }
 
-.field select {
-  width: 100%;
-  height: 42px;
-  padding: 0 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 7px;
-  outline: none;
-  color: #111827;
-  background: #ffffff;
-  color-scheme: light;
-  font: 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.field select option {
-  color: #111827;
-  background: #ffffff;
-}
-
-.field select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
 .photo-upload-panel {
   display: flex;
   align-items: flex-end;
@@ -751,7 +728,97 @@ body {
 }
 
 .reference-mode-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 14px;
+}
+
+.reference-dropdown-label {
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reference-dropdown-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #111827;
+  background: #ffffff;
+  font: 14px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.reference-dropdown-trigger:hover {
+  border-color: #a5b4fc;
+  background: #f8fafc;
+}
+
+.reference-dropdown-trigger:focus-visible {
+  border-color: #818cf8;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.14);
+}
+
+.reference-dropdown-chevron {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  color: #64748b;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.reference-dropdown-trigger[aria-expanded="true"] .reference-dropdown-chevron {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.reference-dropdown-menu {
+  display: grid;
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid #dbe2ea;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.reference-dropdown-menu button {
+  width: 100%;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 6px;
+  color: #334155;
+  background: transparent;
+  font: 600 12px/1.35 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reference-dropdown-menu button:hover,
+.reference-dropdown-menu button:focus-visible {
+  outline: none;
+  color: #3730a3;
+  background: #eef2ff;
+}
+
+.reference-dropdown-menu button.selected {
+  color: #312e81;
+  background: #e0e7ff;
 }
 
 .reference-form-list .repeated-item {
@@ -933,20 +1000,55 @@ body {
 }
 
 .dark-theme .field input,
-.dark-theme .field textarea,
-.dark-theme .field select {
+.dark-theme .field textarea {
   border-color: #475569;
   color: #f8fafc;
   background: #111827;
 }
 
-.dark-theme .field select {
-  color-scheme: dark;
+.dark-theme .reference-dropdown-label {
+  color: #cbd5e1;
 }
 
-.dark-theme .field select option {
+.dark-theme .reference-dropdown-trigger {
+  border-color: #475569;
   color: #f8fafc;
   background: #111827;
+}
+
+.dark-theme .reference-dropdown-trigger:hover {
+  border-color: #64748b;
+  background: #18212f;
+}
+
+.dark-theme .reference-dropdown-trigger:focus-visible {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2);
+}
+
+.dark-theme .reference-dropdown-chevron {
+  color: #94a3b8;
+}
+
+.dark-theme .reference-dropdown-menu {
+  border-color: #475569;
+  background: #18212f;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.dark-theme .reference-dropdown-menu button {
+  color: #cbd5e1;
+}
+
+.dark-theme .reference-dropdown-menu button:hover,
+.dark-theme .reference-dropdown-menu button:focus-visible {
+  color: #ffffff;
+  background: #243b5a;
+}
+
+.dark-theme .reference-dropdown-menu button.selected {
+  color: #ffffff;
+  background: #3730a3;
 }
 
 .dark-theme .field input::placeholder,
@@ -1245,8 +1347,7 @@ body {
 
 button:focus-visible,
 input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+textarea:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
