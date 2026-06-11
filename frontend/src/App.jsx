@@ -404,25 +404,19 @@ const isSafariLikeBrowser = () => {
   return isIOS || isMacSafari
 }
 
-const isSafePreviewMode = () => {
-  if (typeof window === 'undefined') return false
-
-  try {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('safe') === '1' || isSafariLikeBrowser()
-  } catch {
-    return isSafariLikeBrowser()
-  }
-}
 function SimplePreview({ children, className = '' }) {
   return (
     <div className="resume-preview-stack simple-preview-stack">
       <article className={`resume-preview simple-resume-preview ${className}`.trim()}>
         {children}
       </article>
+      <article className={`resume-preview resume-print-preview ${className}`.trim()}>
+        {children}
+      </article>
     </div>
   )
 }
+
 class SafePaginatedPreview extends Component {
   constructor(props) {
     super(props)
@@ -440,16 +434,6 @@ class SafePaginatedPreview extends Component {
   render() {
     const { children, className = '', pageLabel } = this.props
 
-    if (isSafePreviewMode()) {
-      return (
-        <div className="resume-preview-stack simple-preview-stack">
-          <article className={`resume-preview simple-resume-preview ${className}`.trim()}>
-            <p>Preview is simplified on Safari for stability.</p>
-          </article>
-        </div>
-      )
-    }
-
     if (this.state.hasError) {
       return <SimplePreview className={className}>{children}</SimplePreview>
     }
@@ -461,8 +445,9 @@ class SafePaginatedPreview extends Component {
     )
   }
 }
+
 function PaginatedPreview({ children, className = '', pageLabel }) {
-  if (isSafePreviewMode()) {
+  if (isSafariLikeBrowser()) {
     return <SimplePreview className={className}>{children}</SimplePreview>
   }
 
@@ -900,7 +885,7 @@ function ReferenceModeDropdown({ value, onChange, t }) {
   )
 }
 
-function AppContent() {
+function App() {
   const [resume, setResume] = useState(() => cloneResume(initialResume))
   const [language, setLanguage] = useState('en')
   const [template, setTemplate] = useState('ats')
@@ -921,29 +906,7 @@ function AppContent() {
       // The selected theme still works when browser storage is unavailable.
     }
   }, [theme])
-  if (isSafePreviewMode()) {
-    return (
-      <main className={`app-shell ${theme === 'dark' ? 'dark-theme' : ''}`}>
-        <aside className="editor-panel">
-          <div className="editor-header">
-            <div>
-              <p className="eyebrow">Safari safe mode</p>
-              <h1>ATS Resume Builder</h1>
-              <p>The app is running in simplified Safari mode.</p>
-            </div>
-          </div>
 
-          <div className="document-actions-section">
-            <p className="document-actions-label">Status</p>
-            <p>
-              If you can see this screen on iPhone, the crash is inside the full editor
-              or resume preview UI.
-            </p>
-          </div>
-        </aside>
-      </main>
-    )
-  }
   const clearPhoto = () => {
     setProfilePhoto('')
     setPhotoInputKey((current) => current + 1)
@@ -1370,27 +1333,25 @@ function AppContent() {
               <div className="custom-fields-list">
                 {resume.personal.customFields.map((field, index) => (
                   <div className="custom-field-row" key={index}>
-                    <div className="custom-field-input-row">
-                      <Field
-                        label={t('Label')}
-                        value={field.label}
-                        onChange={(value) => updateCustomField(index, 'label', value)}
-                        placeholder="Website"
-                      />
-                      <Field
-                        label={t('Value')}
-                        value={field.value}
-                        onChange={(value) => updateCustomField(index, 'value', value)}
-                        placeholder="meltemmeydan.dev"
-                      />
-                      <button
-                        type="button"
-                        className="remove-button custom-field-remove"
-                        onClick={() => removeCustomField(index)}
-                      >
-                        {t('Remove')}
-                      </button>
-                    </div>
+                    <Field
+                      label={t('Label')}
+                      value={field.label}
+                      onChange={(value) => updateCustomField(index, 'label', value)}
+                      placeholder="Website"
+                    />
+                    <Field
+                      label={t('Value')}
+                      value={field.value}
+                      onChange={(value) => updateCustomField(index, 'value', value)}
+                      placeholder="meltemmeydan.dev"
+                    />
+                    <button
+                      type="button"
+                      className="remove-button custom-field-remove"
+                      onClick={() => removeCustomField(index)}
+                    >
+                      {t('Remove')}
+                    </button>
                     {isUrl(field.value) && (
                       <div className="custom-url-display">
                         <span>{t('Display as')}</span>
@@ -2113,27 +2074,5 @@ function AppContent() {
     </main>
   )
 }
-function SafariSafeApp() {
-  return (
-    <main className="app-shell">
-      <aside className="editor-panel">
-        <div className="editor-header">
-          <div>
-            <p className="eyebrow">Safari safe mode</p>
-            <h1>ATS Resume Builder</h1>
-            <p>The app opened in simplified Safari mode.</p>
-          </div>
-        </div>
-      </aside>
-    </main>
-  )
-}
 
-function App() {
-  if (isSafePreviewMode()) {
-    return <SafariSafeApp />
-  }
-
-  return <AppContent />
-}
 export default App
