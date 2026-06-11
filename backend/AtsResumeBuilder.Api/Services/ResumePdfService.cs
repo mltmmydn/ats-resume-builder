@@ -73,16 +73,15 @@ public class ResumePdfService : IResumePdfService
         if (contact.Length > 0)
             column.Item().AlignCenter().Text(contact).FontSize(9);
 
-        var optionalContacts = new List<string?>
-        {
-            LabeledValue("LinkedIn", personalInfo?.LinkedInUrl),
-            LabeledValue("GitHub", personalInfo?.GitHubUrl),
-            LabeledValue("Portfolio", personalInfo?.PortfolioUrl)
-        };
-
-        optionalContacts.AddRange(personalInfo?.CustomFields?
-            .Where(field => HasText(field.Label) && HasText(field.Value))
-            .Select(field => LabeledValue(field.Label, field.Value)) ?? []);
+        var optionalContacts = personalInfo?.CustomFields?
+            .Where(field => HasText(field.Value) && (HasText(field.Label) || IsUrl(field.Value!)))
+            .Select(field => LabeledValue(
+                field.Label,
+                field.Value,
+                HasText(field.DisplayMode)
+                    ? field.DisplayMode
+                    : HasText(field.Label) ? "label" : "short"))
+            .ToList() ?? [];
 
         var populatedOptionalContacts = optionalContacts
             .Where(HasText)
@@ -109,12 +108,13 @@ public class ResumePdfService : IResumePdfService
         IReadOnlyCollection<ExperienceDto> experiences,
         string? language)
     {
-        if (experiences.Count == 0)
+        var populatedExperiences = experiences.Where(HasExperienceContent).ToList();
+        if (populatedExperiences.Count == 0)
             return;
 
         AddSectionHeading(column, "WORK EXPERIENCE");
 
-        foreach (var experience in experiences)
+        foreach (var experience in populatedExperiences)
         {
             var dateRange = JoinDateRange(
                 experience.StartDate,
@@ -149,12 +149,13 @@ public class ResumePdfService : IResumePdfService
         IReadOnlyCollection<EducationDto> education,
         string? language)
     {
-        if (education.Count == 0)
+        var populatedEducation = education.Where(HasEducationContent).ToList();
+        if (populatedEducation.Count == 0)
             return;
 
         AddSectionHeading(column, "EDUCATION");
 
-        foreach (var item in education)
+        foreach (var item in populatedEducation)
         {
             var program = string.Join(" / ", new[] { item.Degree, item.Department }.Where(HasText));
             var gpaLabel = string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase)
@@ -233,12 +234,13 @@ public class ResumePdfService : IResumePdfService
         ColumnDescriptor column,
         IReadOnlyCollection<ProjectDto> projects)
     {
-        if (projects.Count == 0)
+        var populatedProjects = projects.Where(HasProjectContent).ToList();
+        if (populatedProjects.Count == 0)
             return;
 
         AddSectionHeading(column, "PROJECTS");
 
-        foreach (var project in projects)
+        foreach (var project in populatedProjects)
         {
             column.Item().PaddingTop(3).Text(project.ProjectName ?? string.Empty).SemiBold();
 
@@ -281,12 +283,13 @@ public class ResumePdfService : IResumePdfService
         ColumnDescriptor column,
         IReadOnlyCollection<LanguageDto> languages)
     {
-        if (languages.Count == 0)
+        var populatedLanguages = languages.Where(HasLanguageContent).ToList();
+        if (populatedLanguages.Count == 0)
             return;
 
         AddSectionHeading(column, "LANGUAGES");
 
-        foreach (var language in languages)
+        foreach (var language in populatedLanguages)
         {
             var line = JoinTitle(language.LanguageName, language.Level);
             if (line.Length > 0)
@@ -298,12 +301,13 @@ public class ResumePdfService : IResumePdfService
         ColumnDescriptor column,
         IReadOnlyCollection<CertificateDto> certificates)
     {
-        if (certificates.Count == 0)
+        var populatedCertificates = certificates.Where(HasCertificateContent).ToList();
+        if (populatedCertificates.Count == 0)
             return;
 
         AddSectionHeading(column, "CERTIFICATES");
 
-        foreach (var certificate in certificates)
+        foreach (var certificate in populatedCertificates)
         {
             column.Item().PaddingTop(3).Row(row =>
             {
@@ -341,15 +345,20 @@ public class ResumePdfService : IResumePdfService
         if (string.Equals(referenceMode, "none", StringComparison.OrdinalIgnoreCase))
             return;
 
-        AddSectionHeading(column, "REFERENCES");
-
         if (!string.Equals(referenceMode, "contacts", StringComparison.OrdinalIgnoreCase))
         {
+            AddSectionHeading(column, "REFERENCES");
             column.Item().Text("References available upon request.");
             return;
         }
 
-        foreach (var reference in references)
+        var populatedReferences = references.Where(HasReferenceContent).ToList();
+        if (populatedReferences.Count == 0)
+            return;
+
+        AddSectionHeading(column, "REFERENCES");
+
+        foreach (var reference in populatedReferences)
         {
             var role = JoinNonEmpty(reference.JobTitle, reference.Company);
             var heading = JoinTitle(reference.FullName, role);
@@ -440,11 +449,107 @@ public class ResumePdfService : IResumePdfService
                (volunteer.Responsibilities?.Any(HasText) ?? false);
     }
 
-    private static string? LabeledValue(string? label, string? value)
+    private static bool HasExperienceContent(ExperienceDto experience)
     {
-        return HasText(label) && HasText(value)
-            ? $"{label!.Trim().TrimEnd(':')}: {value!.Trim()}"
-            : null;
+        return HasText(experience.CompanyName) ||
+               HasText(experience.JobTitle) ||
+               HasText(experience.Location) ||
+               HasText(experience.StartDate) ||
+               HasText(experience.EndDate) ||
+               (experience.Responsibilities?.Any(HasText) ?? false);
+    }
+
+    private static bool HasEducationContent(EducationDto education)
+    {
+        return HasText(education.SchoolName) ||
+               HasText(education.Degree) ||
+               HasText(education.Department) ||
+               HasText(education.StartDate) ||
+               HasText(education.EndDate) ||
+               HasText(education.Gpa);
+    }
+
+    private static bool HasProjectContent(ProjectDto project)
+    {
+        return HasText(project.ProjectName) ||
+               HasText(project.Description) ||
+               HasText(project.Technologies);
+    }
+
+    private static bool HasLanguageContent(LanguageDto language)
+    {
+        return HasText(language.LanguageName) || HasText(language.Level);
+    }
+
+    private static bool HasCertificateContent(CertificateDto certificate)
+    {
+        return HasText(certificate.CertificateName) ||
+               HasText(certificate.Issuer) ||
+               HasText(certificate.Date) ||
+               (certificate.Details?.Any(HasText) ?? false);
+    }
+
+    private static bool HasReferenceContent(ReferenceDto reference)
+    {
+        return HasText(reference.FullName) ||
+               HasText(reference.JobTitle) ||
+               HasText(reference.Company) ||
+               HasText(reference.Email) ||
+               HasText(reference.Phone) ||
+               HasText(reference.Relationship);
+    }
+
+    private static string? LabeledValue(string? label, string? value, string? displayMode = null)
+    {
+        if (!HasText(value))
+            return null;
+
+        var cleanLabel = HasText(label) ? label!.Trim().TrimEnd(':') : string.Empty;
+        if (IsUrl(value!))
+        {
+            var shortenedUrl = ShortenUrl(value!);
+            if (!HasText(displayMode))
+                return cleanLabel.Length > 0 ? $"{cleanLabel}: {shortenedUrl}" : shortenedUrl;
+
+            return displayMode!.Trim().ToLowerInvariant() switch
+            {
+                "full" => value!.Trim(),
+                "label" when cleanLabel.Length > 0 => cleanLabel,
+                _ => shortenedUrl
+            };
+        }
+
+        return cleanLabel.Length > 0
+            ? $"{cleanLabel}: {value!.Trim()}"
+            : value!.Trim();
+    }
+
+    private static bool IsUrl(string value)
+    {
+        var normalizedValue = value.Trim();
+
+        if (Uri.TryCreate(normalizedValue, UriKind.Absolute, out var absoluteUri))
+            return absoluteUri.Scheme is "http" or "https";
+
+        return System.Text.RegularExpressions.Regex.IsMatch(
+            normalizedValue,
+            @"^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:[/:?#][^\s]*)?$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    private static string ShortenUrl(string value)
+    {
+        var shortenedValue = value.Trim();
+
+        if (shortenedValue.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            shortenedValue = shortenedValue["https://".Length..];
+        else if (shortenedValue.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            shortenedValue = shortenedValue["http://".Length..];
+
+        if (shortenedValue.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            shortenedValue = shortenedValue["www.".Length..];
+
+        return shortenedValue.TrimEnd('/');
     }
 
     private static string JoinTitle(string? primary, string? secondary)

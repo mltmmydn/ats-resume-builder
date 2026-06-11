@@ -7,9 +7,6 @@ public class PersonalInfoDto
     public string? Email { get; set; }
     public string? Phone { get; set; }
     public string? Location { get; set; }
-    public string? LinkedInUrl { get; set; }
-    public string? GitHubUrl { get; set; }
-    public string? PortfolioUrl { get; set; }
     public string? Summary { get; set; }
     public List<CustomFieldDto> CustomFields { get; set; } = new();
 }

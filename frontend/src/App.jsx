@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Children, isValidElement, useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '') || ''
@@ -41,7 +41,7 @@ const emptyProject = {
 
 const emptyLanguage = { name: '', level: '' }
 const emptyCertificate = { name: '', issuer: '', date: '', details: '' }
-const emptyCustomField = { label: '', value: '' }
+const emptyCustomField = { label: '', value: '', displayMode: '' }
 const emptySkillCategory = { category: '', items: '' }
 const emptyReference = {
   fullName: '',
@@ -76,12 +76,12 @@ const turkishTranslations = {
   Email: 'E-posta',
   Phone: 'Telefon',
   Location: 'Konum',
-  'LinkedIn URL (optional)': 'LinkedIn Adresi (isteğe bağlı)',
-  'GitHub URL (optional)': 'GitHub Adresi (isteğe bağlı)',
-  'Portfolio URL (optional)': 'Portföy Adresi (isteğe bağlı)',
   'Additional Fields (optional)': 'Ek Alanlar (isteğe bağlı)',
-  'Field Label': 'Alan Etiketi',
-  'Field Value': 'Alan Değeri',
+  'Display as': 'Görünüm',
+  Label: 'Etiket',
+  Value: 'Değer',
+  'Short URL': 'Kısa URL',
+  'Full URL': 'Tam URL',
   'Add Field': 'Alan Ekle',
   Summary: 'Özet',
   'Work Experience': 'İş Deneyimi',
@@ -131,6 +131,7 @@ const turkishTranslations = {
   'Professional Summary': 'Profesyonel Özet',
   Technologies: 'Teknolojiler',
   'Your Name': 'Adınız Soyadınız',
+  Page: 'Sayfa',
 }
 
 const actionTranslations = {
@@ -168,13 +169,24 @@ const initialResume = {
     email: 'alex.carter@example.com',
     phone: '+1 555 010 1234',
     location: 'Seattle, WA',
-    linkedin: 'linkedin.example.com/alex-carter',
-    github: 'github.example.com/alex-carter',
-    portfolio: 'alex-carter.example.com',
     customFields: [
-      { label: 'Website', value: 'alex-carter.example.com' },
-      { label: 'Medium', value: 'medium.example.com/alex-carter' },
-      { label: 'LeetCode', value: 'leetcode.example.com/alex-carter' },
+      {
+        label: 'LinkedIn',
+        value: 'https://www.linkedin.example.com/in/alex-carter',
+        displayMode: 'label',
+      },
+      {
+        label: 'GitHub',
+        value: 'github.example.com/alex-carter',
+        displayMode: 'short',
+      },
+      {
+        label: 'Portfolio',
+        value: 'alex-carter.example.com',
+        displayMode: 'label',
+      },
+      { label: 'Medium', value: 'medium.example.com/alex-carter', displayMode: 'label' },
+      { label: 'LeetCode', value: 'leetcode.example.com/alex-carter', displayMode: 'label' },
     ],
     summary:
       'Software engineer experienced in building reliable web applications and APIs, with a focus on maintainable code, collaboration, and practical product improvements.',
@@ -267,9 +279,6 @@ const emptyResume = {
     email: '',
     phone: '',
     location: '',
-    linkedin: '',
-    github: '',
-    portfolio: '',
     customFields: [],
     summary: '',
   },
@@ -379,13 +388,174 @@ function PreviewSection({ title, children }) {
   )
 }
 
-function ContactItem({ label, value, href }) {
+function PaginatedPreview({ children, className = '', pageLabel }) {
+  const blocks = Children.toArray(children).flatMap((block, blockIndex) => {
+    if (!isValidElement(block) || block.type !== PreviewSection) return block
+
+    const sectionChildren = Children.toArray(block.props.children)
+    if (sectionChildren.length <= 1) return block
+
+    return sectionChildren.map((sectionChild, childIndex) => (
+      <section
+        className={`resume-section ${childIndex > 0 ? 'preview-section-continuation' : ''}`.trim()}
+        key={`${blockIndex}-${childIndex}`}
+      >
+        {childIndex === 0 && <h2>{block.props.title}</h2>}
+        {sectionChild}
+      </section>
+    ))
+  })
+  const measureRef = useRef(null)
+  const [pages, setPages] = useState([blocks.map((_, index) => index)])
+
+  useEffect(() => {
+    const measure = measureRef.current
+    if (!measure || typeof ResizeObserver === 'undefined') return undefined
+
+    const updatePages = () => {
+      const styles = window.getComputedStyle(measure)
+      const pageHeight = measure.clientWidth * (297 / 210)
+      const contentHeight =
+        pageHeight - Number.parseFloat(styles.paddingTop) - Number.parseFloat(styles.paddingBottom)
+      const measuredBlocks = Array.from(measure.children)
+      const nextPages = []
+      let currentPage = []
+      let currentHeight = 0
+
+      measuredBlocks.forEach((block, index) => {
+        const blockHeight = block.getBoundingClientRect().height
+
+        if (currentPage.length > 0 && currentHeight + blockHeight > contentHeight) {
+          nextPages.push(currentPage)
+          currentPage = []
+          currentHeight = 0
+        }
+
+        currentPage.push(index)
+        currentHeight += blockHeight
+      })
+
+      if (currentPage.length > 0 || nextPages.length === 0) nextPages.push(currentPage)
+
+      setPages((currentPages) =>
+        JSON.stringify(currentPages) === JSON.stringify(nextPages) ? currentPages : nextPages,
+      )
+    }
+
+    const resizeObserver = new ResizeObserver(updatePages)
+    resizeObserver.observe(measure)
+    Array.from(measure.children).forEach((block) => resizeObserver.observe(block))
+    updatePages()
+
+    return () => resizeObserver.disconnect()
+  }, [children])
+
+  return (
+    <div className="resume-preview-stack">
+      <div
+        className={`resume-preview resume-preview-measure ${className}`.trim()}
+        ref={measureRef}
+        aria-hidden="true"
+      >
+        {blocks.map((block, index) => (
+          <div className="preview-measure-block" key={index}>
+            {block}
+          </div>
+        ))}
+      </div>
+
+      <div className="preview-page-cards">
+        {pages.map((page, pageIndex) => (
+          <div className="preview-page-shell" key={pageIndex}>
+            <span className="preview-page-label" aria-hidden="true">
+              {pageLabel} {pageIndex + 1}
+            </span>
+            <article className={`resume-preview preview-page-card ${className}`.trim()}>
+              {page.map((blockIndex) => (
+                <div className="preview-page-block" key={blockIndex}>
+                  {blocks[blockIndex]}
+                </div>
+              ))}
+            </article>
+          </div>
+        ))}
+      </div>
+
+      <article className={`resume-preview resume-print-preview ${className}`.trim()}>
+        {children}
+      </article>
+    </div>
+  )
+}
+
+const domainNamePattern =
+  /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}$/i
+
+const isUrl = (value) => {
+  const trimmedValue = value?.trim() || ''
+  if (!trimmedValue || /\s/.test(trimmedValue)) return false
+
+  const urlCandidate = /^https?:\/\//i.test(trimmedValue)
+    ? trimmedValue
+    : `https://${trimmedValue}`
+
+  try {
+    const parsedUrl = new URL(urlCandidate)
+    return (
+      ['http:', 'https:'].includes(parsedUrl.protocol) &&
+      domainNamePattern.test(parsedUrl.hostname)
+    )
+  } catch {
+    return false
+  }
+}
+
+const normalizeUrl = (value) => {
+  const trimmedValue = value?.trim() || ''
+  if (!isUrl(trimmedValue)) return ''
+
+  return /^https?:\/\//i.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`
+}
+
+const shortenUrl = (value) =>
+  (value?.trim() || '')
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/\/$/, '')
+
+const defaultUrlDisplayMode = (label) => (label?.trim() ? 'label' : 'short')
+
+const formatUrlLabel = (label, value, displayMode) => {
+  const cleanLabel = label?.trim().replace(/:+$/, '') || ''
+  const resolvedDisplayMode = displayMode || defaultUrlDisplayMode(cleanLabel)
+
+  if (resolvedDisplayMode === 'full') return value?.trim() || ''
+  if (resolvedDisplayMode === 'label' && cleanLabel) return cleanLabel
+
+  return shortenUrl(value)
+}
+
+function ContactItem({ label, value, href, displayMode }) {
   if (!value?.trim()) return null
 
-  return href ? (
-    <a href={href} target="_blank" rel="noreferrer">
-      {label && <strong>{label}: </strong>}
-      {value.trim()}
+  const valueIsUrl = isUrl(value)
+  const linkTarget = valueIsUrl ? normalizeUrl(value) : href
+
+  return linkTarget ? (
+    <a
+      className={valueIsUrl ? 'personal-link' : ''}
+      href={linkTarget}
+      target={valueIsUrl ? '_blank' : undefined}
+      rel={valueIsUrl ? 'noreferrer' : undefined}
+    >
+      {valueIsUrl ? (
+        formatUrlLabel(label, value, displayMode)
+      ) : (
+        <>
+          {label && <strong>{label}: </strong>}
+          {value.trim()}
+        </>
+      )}
     </a>
   ) : (
     <span>
@@ -701,13 +871,6 @@ function App() {
     }))
   }
 
-  const formatUrl = (url) => {
-    if (!url) return ''
-    return url.startsWith('http://') || url.startsWith('https://')
-      ? url
-      : `https://${url}`
-  }
-
   const responsibilityLines = (responsibilities) =>
     (responsibilities || '')
       .split('\n')
@@ -743,6 +906,48 @@ function App() {
       volunteer.responsibilities,
     ].some((value) => value?.trim())
 
+  const hasMeaningfulFields = (item, fields) =>
+    fields.some((field) => item[field]?.trim())
+
+  const hasMeaningfulExperienceFields = (experience) =>
+    hasMeaningfulFields(experience, [
+      'company',
+      'title',
+      'location',
+      'startDate',
+      'endDate',
+      'responsibilities',
+    ])
+
+  const hasMeaningfulEducationFields = (education) =>
+    hasMeaningfulFields(education, [
+      'school',
+      'degree',
+      'department',
+      'startDate',
+      'endDate',
+      'gpa',
+    ])
+
+  const hasMeaningfulProjectFields = (project) =>
+    hasMeaningfulFields(project, ['name', 'description', 'technologies'])
+
+  const hasMeaningfulLanguageFields = (language) =>
+    hasMeaningfulFields(language, ['name', 'level'])
+
+  const hasMeaningfulCertificateFields = (certificate) =>
+    hasMeaningfulFields(certificate, ['name', 'issuer', 'date', 'details'])
+
+  const hasMeaningfulReferenceFields = (reference) =>
+    hasMeaningfulFields(reference, [
+      'fullName',
+      'jobTitle',
+      'company',
+      'email',
+      'phone',
+      'relationship',
+    ])
+
   const skillCategoryLabel = (category) =>
     (category || '').trim().replace(/:+$/, '').trim() || t('Skills')
 
@@ -765,13 +970,10 @@ function App() {
       email: resume.personal.email,
       phone: resume.personal.phone,
       location: resume.personal.location,
-      linkedInUrl: resume.personal.linkedin,
-      gitHubUrl: resume.personal.github,
-      portfolioUrl: resume.personal.portfolio,
       summary: resume.personal.summary,
       customFields: populatedCustomFields,
     },
-    experiences: resume.experiences.map((experience) => ({
+    experiences: populatedExperiences.map((experience) => ({
       companyName: experience.company,
       jobTitle: experience.title,
       location: experience.location,
@@ -790,7 +992,7 @@ function App() {
         isCurrent: volunteer.isCurrent,
         responsibilities: responsibilityLines(volunteer.responsibilities),
       })),
-    education: resume.education.map((education) => ({
+    education: populatedEducation.map((education) => ({
       schoolName: education.school,
       degree: education.degree,
       department: education.department,
@@ -798,7 +1000,7 @@ function App() {
       endDate: education.endDate,
       gpa: education.gpa,
     })),
-    projects: resume.projects.map((project) => ({
+    projects: populatedProjects.map((project) => ({
       projectName: project.name,
       description: project.description,
       technologies: project.technologies,
@@ -809,18 +1011,18 @@ function App() {
         skills: commaSeparatedValues(skill.items),
       }))
       .filter((skill) => skill.skills.length > 0),
-    languages: resume.languages.map((language) => ({
+    languages: populatedLanguages.map((language) => ({
       languageName: language.name,
       level: language.level,
     })),
-    certificates: resume.certificates.map((certificate) => ({
+    certificates: populatedCertificates.map((certificate) => ({
       certificateName: certificate.name,
       issuer: certificate.issuer,
       date: certificate.date,
       details: responsibilityLines(certificate.details),
     })),
     referenceMode: resume.referenceMode,
-    references: resume.references.map((reference) => ({
+    references: populatedReferences.map((reference) => ({
       fullName: reference.fullName,
       jobTitle: reference.jobTitle,
       company: reference.company,
@@ -864,17 +1066,19 @@ function App() {
   }
 
   const populatedCustomFields = resume.personal.customFields.filter(
-    (field) => field.label.trim() && field.value.trim(),
+    (field) => field.value.trim() && (field.label.trim() || isUrl(field.value)),
   )
+  const populatedExperiences = resume.experiences.filter(hasMeaningfulExperienceFields)
   const populatedSkills = resume.skills.filter((skill) => skill.items.trim())
   const populatedVolunteerExperiences = resume.volunteerExperiences.filter(
     hasMeaningfulVolunteerFields,
   )
-  const hasOptionalContactFields =
-    Boolean(resume.personal.linkedin.trim()) ||
-    Boolean(resume.personal.github.trim()) ||
-    Boolean(resume.personal.portfolio.trim()) ||
-    populatedCustomFields.length > 0
+  const populatedEducation = resume.education.filter(hasMeaningfulEducationFields)
+  const populatedProjects = resume.projects.filter(hasMeaningfulProjectFields)
+  const populatedLanguages = resume.languages.filter(hasMeaningfulLanguageFields)
+  const populatedCertificates = resume.certificates.filter(hasMeaningfulCertificateFields)
+  const populatedReferences = resume.references.filter(hasMeaningfulReferenceFields)
+  const hasOptionalContactFields = populatedCustomFields.length > 0
 
   return (
     <main className={`app-shell ${theme === 'dark' ? 'dark-theme' : ''}`}>
@@ -991,24 +1195,7 @@ function App() {
                 value={resume.personal.location}
                 onChange={(value) => updatePersonal('location', value)}
                 placeholder="Seattle, WA"
-              />
-              <Field
-                label={t('LinkedIn URL (optional)')}
-                value={resume.personal.linkedin}
-                onChange={(value) => updatePersonal('linkedin', value)}
-                placeholder="linkedin.com/in/alexmorgan"
-              />
-              <Field
-                label={t('GitHub URL (optional)')}
-                value={resume.personal.github}
-                onChange={(value) => updatePersonal('github', value)}
-                placeholder="github.com/alexmorgan"
-              />
-              <Field
-                label={t('Portfolio URL (optional)')}
-                value={resume.personal.portfolio}
-                onChange={(value) => updatePersonal('portfolio', value)}
-                placeholder="alexmorgan.dev"
+                wide
               />
               <TextAreaField
                 label={t('Summary')}
@@ -1023,13 +1210,13 @@ function App() {
                 {resume.personal.customFields.map((field, index) => (
                   <div className="custom-field-row" key={index}>
                     <Field
-                      label={t('Field Label')}
+                      label={t('Label')}
                       value={field.label}
                       onChange={(value) => updateCustomField(index, 'label', value)}
                       placeholder="Website"
                     />
                     <Field
-                      label={t('Field Value')}
+                      label={t('Value')}
                       value={field.value}
                       onChange={(value) => updateCustomField(index, 'value', value)}
                       placeholder="meltemmeydan.dev"
@@ -1041,6 +1228,39 @@ function App() {
                     >
                       {t('Remove')}
                     </button>
+                    {isUrl(field.value) && (
+                      <div className="custom-url-display">
+                        <span>{t('Display as')}</span>
+                        <div
+                          className="custom-url-display-options"
+                          role="group"
+                          aria-label={t('Display as')}
+                        >
+                          {[
+                            { value: 'label', label: t('Label') },
+                            { value: 'short', label: t('Short URL') },
+                            { value: 'full', label: t('Full URL') },
+                          ].map((option) => {
+                            const selectedMode =
+                              field.displayMode || defaultUrlDisplayMode(field.label)
+
+                            return (
+                              <button
+                                type="button"
+                                aria-pressed={selectedMode === option.value}
+                                className={selectedMode === option.value ? 'active' : ''}
+                                key={option.value}
+                                onClick={() =>
+                                  updateCustomField(index, 'displayMode', option.value)
+                                }
+                              >
+                                {option.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1514,7 +1734,10 @@ function App() {
           <span>{t('Live preview')}</span>
         </div>
 
-        <article className={`resume-preview ${template === 'modern' ? 'modern-template' : ''}`}>
+        <PaginatedPreview
+          className={template === 'modern' ? 'modern-template' : ''}
+          pageLabel={t('Page')}
+        >
           <header className="resume-header">
             <div className="resume-header-content">
               <h1>{resume.personal.fullName || t('Your Name')}</h1>
@@ -1531,23 +1754,13 @@ function App() {
               </div>
               {hasOptionalContactFields && (
                 <div className="contact-line optional-contact-line">
-                  <ContactItem
-                    label="LinkedIn"
-                    value={resume.personal.linkedin}
-                    href={formatUrl(resume.personal.linkedin)}
-                  />
-                  <ContactItem
-                    label="GitHub"
-                    value={resume.personal.github}
-                    href={formatUrl(resume.personal.github)}
-                  />
-                  <ContactItem
-                    label="Portfolio"
-                    value={resume.personal.portfolio}
-                    href={formatUrl(resume.personal.portfolio)}
-                  />
                   {populatedCustomFields.map((field, index) => (
-                    <ContactItem label={field.label} value={field.value} key={index} />
+                    <ContactItem
+                      label={field.label}
+                      value={field.value}
+                      displayMode={field.displayMode}
+                      key={index}
+                    />
                   ))}
                 </div>
               )}
@@ -1563,9 +1776,9 @@ function App() {
             </PreviewSection>
           )}
 
-          {resume.experiences.length > 0 && (
+          {populatedExperiences.length > 0 && (
             <PreviewSection title={t('Work Experience')}>
-              {resume.experiences.map((experience, index) => (
+              {populatedExperiences.map((experience, index) => (
                 <div className="resume-entry" key={index}>
                   <div className="entry-heading">
                     <div>
@@ -1623,9 +1836,9 @@ function App() {
             </PreviewSection>
           )}
 
-          {resume.education.length > 0 && (
+          {populatedEducation.length > 0 && (
             <PreviewSection title={t('Education')}>
-              {resume.education.map((education, index) => (
+              {populatedEducation.map((education, index) => (
                 <div className="resume-entry" key={index}>
                   <div className="entry-heading">
                     <div>
@@ -1643,9 +1856,9 @@ function App() {
             </PreviewSection>
           )}
 
-          {resume.projects.length > 0 && (
+          {populatedProjects.length > 0 && (
             <PreviewSection title={t('Projects')}>
-              {resume.projects.map((project, index) => (
+              {populatedProjects.map((project, index) => (
                 <div className="resume-entry" key={index}>
                   <h3>{project.name || t('Project Name')}</h3>
                   {project.description && <p>{project.description}</p>}
@@ -1671,10 +1884,10 @@ function App() {
             </PreviewSection>
           )}
 
-          {resume.languages.length > 0 && (
+          {populatedLanguages.length > 0 && (
             <PreviewSection title={t('Languages')}>
               <p>
-                {resume.languages
+                {populatedLanguages
                   .map((language) => [language.name, language.level].filter(Boolean).join(' - '))
                   .filter(Boolean)
                   .join(' | ')}
@@ -1682,9 +1895,9 @@ function App() {
             </PreviewSection>
           )}
 
-          {resume.certificates.length > 0 && (
+          {populatedCertificates.length > 0 && (
             <PreviewSection title={t('Certificates')}>
-              {resume.certificates.map((certificate, index) => (
+              {populatedCertificates.map((certificate, index) => (
                 <div className="certificate-entry" key={index}>
                   <div className="certificate-heading">
                     <p>
@@ -1711,9 +1924,9 @@ function App() {
             </PreviewSection>
           )}
 
-          {resume.referenceMode === 'contacts' && resume.references.length > 0 && (
+          {resume.referenceMode === 'contacts' && populatedReferences.length > 0 && (
             <PreviewSection title={t('References')}>
-              {resume.references.map((reference, index) => (
+              {populatedReferences.map((reference, index) => (
                 <div className="reference-entry" key={index}>
                   <p>
                     <strong>{reference.fullName || t('Full Name')}</strong>
@@ -1729,7 +1942,7 @@ function App() {
               ))}
             </PreviewSection>
           )}
-        </article>
+        </PaginatedPreview>
       </section>
     </main>
   )

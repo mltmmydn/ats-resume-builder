@@ -24,20 +24,41 @@ Based on this idea, I built **ATS Resume Builder**, a web application that allow
 ## Features
 
 - Live resume preview while editing
+- A4 page boundary visibility in the preview
 - Clean, single-column ATS-friendly template
-- Modern template with an optional profile photo
+- Modern template with optional profile photo support
 - English and Turkish interface labels
-- Light and dark application themes
+- Light/dark application theme
 - Dynamic work experience and volunteer experience sections
 - Education, projects, and profession-neutral skill categories
 - Languages and certificates with optional details or topics
 - Optional references and custom personal fields
-- Custom fields for links or details such as Portfolio, Website, Medium, or LeetCode
-- Browser-based **Save as PDF**
-- Optional direct PDF generation through the local .NET backend
+- Additional Fields as the single place for optional personal links and personal details
+- Custom fields that detect links such as LinkedIn, GitHub, Portfolio, Website, Medium, or LeetCode
+- Link display options: Label, Short URL, or Full URL
+- Browser-based **Save as PDF** support
+- Optional direct PDF download through the local .NET backend
 - Responsive layout
 
 For the best ATS compatibility, the ATS-friendly template stays simple, text-focused, and does not include a photo.
+
+### Additional Fields and Links
+
+Optional personal links are managed through **Additional Fields**. This keeps the main Personal Information form clean. Each additional field is made of a simple **Label** and **Value** pair, so it can be used for either a link or a normal personal detail.
+
+Values that contain a domain, such as `meltemmeydan.dev` or `github.com/example`, are detected as links even when they do not start with `https://`. When a value is detected as a URL, the user can choose how the link appears on the resume:
+
+- **Label** shows the field label.
+- **Short URL** removes the protocol, `www.`, and trailing slash.
+- **Full URL** shows the entered value as it is.
+
+For links without a protocol, the app automatically adds `https://` internally so the links remain clickable. Newly added fields also show the display options automatically when their value is detected as a URL. Normal non-URL text values do not show URL display options. Empty fields are not shown in the preview or PDF output.
+
+### A4 Preview
+
+The resume preview is designed to make the A4 page structure easier to understand. As the content grows, new page starts are visually separated in the preview area. This helps users follow how many pages the resume will take and where page transitions will happen in the PDF output.
+
+These visual page helpers are only used to improve the preview experience. They do not appear as unnecessary lines, labels, or helper elements in the exported PDF.
 
 ## PDF Export
 

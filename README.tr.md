@@ -24,20 +24,41 @@ Bu fikirden yola çıkarak **ATS Resume Builder** adında, kullanıcıların bil
 ## Özellikler
 
 - Düzenleme sırasında anlık canlı önizleme
+- Önizlemede A4 sayfa sınırlarını görebilme
 - Sade ve tek sütunlu ATS uyumlu şablon
 - İsteğe bağlı profil fotoğrafı destekleyen modern şablon
 - İngilizce ve Türkçe arayüz etiketleri
-- Açık ve koyu uygulama temaları
+- Açık/koyu uygulama teması
 - Dinamik iş deneyimi ve gönüllü deneyim bölümleri
 - Eğitim, projeler ve farklı mesleklere uyarlanabilen yetenek kategorileri
 - Diller ve detay/konu eklenebilen sertifikalar
 - İsteğe bağlı referanslar ve kişisel ek alanlar
-- Portföy, web sitesi, Medium veya LeetCode gibi özel alanlar
+- Opsiyonel bağlantılar ve kişisel detaylar için tek merkez olarak Ek Alanlar
+- LinkedIn, GitHub, Portföy, web sitesi, Medium veya LeetCode gibi bağlantıları tanıyan özel alanlar
+- Bağlantılar için Etiket, Kısa URL veya Tam URL olarak görünüm seçebilme
 - Tarayıcı üzerinden **PDF olarak Kaydet** desteği
-- Local geliştirmede opsiyonel backend üzerinden doğrudan PDF indirme
+- Yerel geliştirme ortamında opsiyonel backend üzerinden doğrudan PDF indirme
 - Responsive tasarım
 
-En iyi ATS uyumluluğu için fotoğrafsız ve metin tabanlı ATS Uyumlu şablon kullanılabilir.
+En iyi ATS uyumluluğu için fotoğrafsız ve metin tabanlı ATS uyumlu şablon kullanılabilir.
+
+### Ek Alanlar ve Bağlantılar
+
+Opsiyonel kişisel bağlantılar **Ek Alanlar** üzerinden yönetilir. Böylece ana Kişisel Bilgiler formu sade kalır. Her ek alan basit bir **Etiket** ve **Değer** çiftinden oluşur; bağlantı veya normal bir kişisel detay için kullanılabilir.
+
+`meltemmeydan.dev` veya `github.com/example` gibi domain içeren değerler, başında `https://` olmasa bile bağlantı olarak algılanır. Bir değer URL olarak algılandığında kullanıcı bağlantının özgeçmişte nasıl görüneceğini seçebilir:
+
+- **Etiket**, ek alanın etiketini gösterir.
+- **Kısa URL**, protokolü, `www.` bölümünü ve sondaki eğik çizgiyi kaldırır.
+- **Tam URL**, girilen değeri olduğu gibi gösterir.
+
+Protokolsüz bağlantılara uygulama içinde otomatik olarak `https://` eklenir ve bağlantılar tıklanabilir kalır. Yeni eklenen alanlarda da değer URL olarak algılandığında görünüm seçenekleri otomatik olarak açılır. URL olmayan normal metin değerlerinde bu seçenekler gösterilmez. Boş alanlar önizleme veya PDF çıktısında yer almaz.
+
+### A4 Önizleme
+
+Özgeçmiş önizlemesi A4 sayfa yapısını daha anlaşılır gösterecek şekilde düzenlenmiştir. İçerik uzadıkça yeni sayfa başlangıçları önizleme alanında görsel olarak ayrılır. Böylece kullanıcı CV’nin PDF çıktısında kaç sayfaya yayılacağını ve sayfa geçişlerinin nerede oluşacağını daha kolay takip edebilir.
+
+Bu görsel sayfa ayrımları yalnızca önizleme deneyimini iyileştirmek için kullanılır; PDF çıktısında gereksiz çizgi, etiket veya önizleme yardımcısı gösterilmez.
 
 ## PDF Dışa Aktarma
 
@@ -47,7 +68,7 @@ Proje iki farklı PDF dışa aktarma biçimini destekler.
 
 `VITE_API_BASE_URL` tanımlı değilse uygulamada **PDF olarak Kaydet** butonu görünür. Bu buton tarayıcının yazdırma ekranını açar ve özgeçmişin PDF olarak kaydedilmesini sağlar.
 
-Fotoğraflı Modern şablon seçildiğinde yüklenen profil fotoğrafı tarayıcı tarafından oluşturulan PDF'de korunur. ATS Uyumlu şablonda fotoğraf gösterilmez ve dışa aktarılmaz.
+Fotoğraflı Modern şablon seçildiğinde yüklenen profil fotoğrafı tarayıcı tarafından oluşturulan PDF'de korunur. ATS uyumlu şablonda fotoğraf gösterilmez ve dışa aktarılmaz.
 
 ### Opsiyonel Backend Modu
 
@@ -57,7 +78,7 @@ Repoda QuestPDF kullanan bir .NET 8 backend de bulunur. Frontend aşağıdaki de
 VITE_API_BASE_URL=http://localhost:5000
 ```
 
-Backend zorunlu değildir. Local geliştirme ve referans uygulama olarak repoda tutulur; canlı frontend çalışmak için backend'e ihtiyaç duymaz.
+Backend zorunlu değildir. Yerel geliştirme ve referans uygulama olarak repoda tutulur; canlı frontend çalışmak için backend'e ihtiyaç duymaz.
 
 ## Canlı Yayın ve Cloudflare Pages
 
@@ -92,7 +113,7 @@ ats-resume-builder/
 `-- README.tr.md
 ```
 
-## Local Ortamda Çalıştırma
+## Yerel Ortamda Çalıştırma
 
 ### Frontend
 
@@ -107,7 +128,7 @@ npm install
 npm run dev
 ```
 
-Vite tarafından terminalde gösterilen local adresi tarayıcıda açın.
+Vite tarafından terminalde gösterilen yerel adresi tarayıcıda açın.
 
 Herhangi bir environment değişkeni tanımlanmadığında frontend tek başına çalışır ve tarayıcı üzerinden **PDF olarak Kaydet** özelliğini kullanır.
 
@@ -123,7 +144,7 @@ dotnet restore
 dotnet run
 ```
 
-Local ortamda doğrudan PDF indirmeyi etkinleştirmek için `frontend/.env.local` dosyasını oluşturun:
+Yerel ortamda doğrudan PDF indirmeyi etkinleştirmek için `frontend/.env.local` dosyasını oluşturun:
 
 ```env
 VITE_API_BASE_URL=http://localhost:5000
