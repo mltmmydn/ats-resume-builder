@@ -900,7 +900,7 @@ function ReferenceModeDropdown({ value, onChange, t }) {
   )
 }
 
-function App() {
+function AppContent() {
   const [resume, setResume] = useState(() => cloneResume(initialResume))
   const [language, setLanguage] = useState('en')
   const [template, setTemplate] = useState('ats')
@@ -2113,5 +2113,27 @@ function App() {
     </main>
   )
 }
+function SafariSafeApp() {
+  return (
+    <main className="app-shell">
+      <aside className="editor-panel">
+        <div className="editor-header">
+          <div>
+            <p className="eyebrow">Safari safe mode</p>
+            <h1>ATS Resume Builder</h1>
+            <p>The app opened in simplified Safari mode.</p>
+          </div>
+        </div>
+      </aside>
+    </main>
+  )
+}
 
+function App() {
+  if (isSafePreviewMode()) {
+    return <SafariSafeApp />
+  }
+
+  return <AppContent />
+}
 export default App
