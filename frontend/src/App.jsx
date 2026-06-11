@@ -404,19 +404,25 @@ const isSafariLikeBrowser = () => {
   return isIOS || isMacSafari
 }
 
+const isSafePreviewMode = () => {
+  if (typeof window === 'undefined') return false
+
+  try {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('safe') === '1' || isSafariLikeBrowser()
+  } catch {
+    return isSafariLikeBrowser()
+  }
+}
 function SimplePreview({ children, className = '' }) {
   return (
     <div className="resume-preview-stack simple-preview-stack">
       <article className={`resume-preview simple-resume-preview ${className}`.trim()}>
         {children}
       </article>
-      <article className={`resume-preview resume-print-preview ${className}`.trim()}>
-        {children}
-      </article>
     </div>
   )
 }
-
 class SafePaginatedPreview extends Component {
   constructor(props) {
     super(props)
@@ -447,7 +453,7 @@ class SafePaginatedPreview extends Component {
 }
 
 function PaginatedPreview({ children, className = '', pageLabel }) {
-  if (isSafariLikeBrowser()) {
+  if (isSafePreviewMode()) {
     return <SimplePreview className={className}>{children}</SimplePreview>
   }
 
@@ -1333,25 +1339,27 @@ function App() {
               <div className="custom-fields-list">
                 {resume.personal.customFields.map((field, index) => (
                   <div className="custom-field-row" key={index}>
-                    <Field
-                      label={t('Label')}
-                      value={field.label}
-                      onChange={(value) => updateCustomField(index, 'label', value)}
-                      placeholder="Website"
-                    />
-                    <Field
-                      label={t('Value')}
-                      value={field.value}
-                      onChange={(value) => updateCustomField(index, 'value', value)}
-                      placeholder="meltemmeydan.dev"
-                    />
-                    <button
-                      type="button"
-                      className="remove-button custom-field-remove"
-                      onClick={() => removeCustomField(index)}
-                    >
-                      {t('Remove')}
-                    </button>
+                    <div className="custom-field-input-row">
+                      <Field
+                        label={t('Label')}
+                        value={field.label}
+                        onChange={(value) => updateCustomField(index, 'label', value)}
+                        placeholder="Website"
+                      />
+                      <Field
+                        label={t('Value')}
+                        value={field.value}
+                        onChange={(value) => updateCustomField(index, 'value', value)}
+                        placeholder="meltemmeydan.dev"
+                      />
+                      <button
+                        type="button"
+                        className="remove-button custom-field-remove"
+                        onClick={() => removeCustomField(index)}
+                      >
+                        {t('Remove')}
+                      </button>
+                    </div>
                     {isUrl(field.value) && (
                       <div className="custom-url-display">
                         <span>{t('Display as')}</span>
