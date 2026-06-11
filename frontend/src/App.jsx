@@ -1,4 +1,4 @@
-import { Children, isValidElement, useEffect, useRef, useState } from 'react'
+import { Children, Component, isValidElement, useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '') || ''
@@ -388,70 +388,186 @@ function PreviewSection({ title, children }) {
   )
 }
 
+const isSafariLikeBrowser = () => {
+  if (typeof navigator === 'undefined') return false
+
+  const userAgent = navigator.userAgent || ''
+  const platform = navigator.platform || ''
+  const maxTouchPoints = navigator.maxTouchPoints || 0
+  const isIOS =
+    /iPad|iPhone|iPod/i.test(userAgent) ||
+    (platform === 'MacIntel' && maxTouchPoints > 1)
+  const isMacSafari =
+    /Safari/i.test(userAgent) &&
+    !/Chrome|Chromium|CriOS|Edg|EdgiOS|OPR|Firefox|FxiOS|Android/i.test(userAgent)
+
+  return isIOS || isMacSafari
+}
+
+function SimplePreview({ children, className = '' }) {
+  return (
+    <div className="resume-preview-stack simple-preview-stack">
+      <article className={`resume-preview simple-resume-preview ${className}`.trim()}>
+        {children}
+      </article>
+      <article className={`resume-preview resume-print-preview ${className}`.trim()}>
+        {children}
+      </article>
+    </div>
+  )
+}
+
+class SafePaginatedPreview extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch() {
+    // Keep the editor usable if preview pagination fails in a browser.
+  }
+
+  render() {
+    const { children, className = '', pageLabel } = this.props
+
+    if (this.state.hasError) {
+      return <SimplePreview className={className}>{children}</SimplePreview>
+    }
+
+    return (
+      <PaginatedPreview className={className} pageLabel={pageLabel}>
+        {children}
+      </PaginatedPreview>
+    )
+  }
+}
+
 function PaginatedPreview({ children, className = '', pageLabel }) {
-  const blocks = Children.toArray(children).flatMap((block, blockIndex) => {
-    if (!isValidElement(block) || block.type !== PreviewSection) return block
+  if (isSafariLikeBrowser()) {
+    return <SimplePreview className={className}>{children}</SimplePreview>
+  }
+
+  return (
+    <MeasuredPaginatedPreview className={className} pageLabel={pageLabel}>
+      {children}
+    </MeasuredPaginatedPreview>
+  )
+}
+
+function MeasuredPaginatedPreview({ children, className = '', pageLabel }) {
+  const blocks = Children.toArray(children).reduce((allBlocks, block, blockIndex) => {
+    if (!isValidElement(block) || block.type !== PreviewSection) {
+      allBlocks.push(block)
+      return allBlocks
+    }
 
     const sectionChildren = Children.toArray(block.props.children)
-    if (sectionChildren.length <= 1) return block
+    if (sectionChildren.length <= 1) {
+      allBlocks.push(block)
+      return allBlocks
+    }
 
-    return sectionChildren.map((sectionChild, childIndex) => (
-      <section
-        className={`resume-section ${childIndex > 0 ? 'preview-section-continuation' : ''}`.trim()}
-        key={`${blockIndex}-${childIndex}`}
-      >
-        {childIndex === 0 && <h2>{block.props.title}</h2>}
-        {sectionChild}
-      </section>
-    ))
-  })
+    sectionChildren.forEach((sectionChild, childIndex) => {
+      allBlocks.push(
+        <section
+          className={`resume-section ${childIndex > 0 ? 'preview-section-continuation' : ''}`.trim()}
+          key={`${blockIndex}-${childIndex}`}
+        >
+          {childIndex === 0 && <h2>{block.props.title}</h2>}
+          {sectionChild}
+        </section>,
+      )
+    })
+
+    return allBlocks
+  }, [])
   const measureRef = useRef(null)
   const [pages, setPages] = useState([blocks.map((_, index) => index)])
+  const [paginationReady, setPaginationReady] = useState(false)
 
   useEffect(() => {
     const measure = measureRef.current
-    if (!measure || typeof ResizeObserver === 'undefined') return undefined
+    if (!measure) return undefined
+
+    let animationFrameId = 0
+    let isDisposed = false
 
     const updatePages = () => {
-      const styles = window.getComputedStyle(measure)
-      const pageHeight = measure.clientWidth * (297 / 210)
-      const contentHeight =
-        pageHeight - Number.parseFloat(styles.paddingTop) - Number.parseFloat(styles.paddingBottom)
-      const measuredBlocks = Array.from(measure.children)
-      const nextPages = []
-      let currentPage = []
-      let currentHeight = 0
+      try {
+        const styles = window.getComputedStyle(measure)
+        const width = measure.getBoundingClientRect().width
+        const paddingTop = Number.parseFloat(styles.paddingTop) || 0
+        const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0
+        const contentHeight = width * (297 / 210) - paddingTop - paddingBottom
 
-      measuredBlocks.forEach((block, index) => {
-        const blockHeight = block.getBoundingClientRect().height
-
-        if (currentPage.length > 0 && currentHeight + blockHeight > contentHeight) {
-          nextPages.push(currentPage)
-          currentPage = []
-          currentHeight = 0
+        if (!Number.isFinite(contentHeight) || contentHeight <= 0) {
+          setPaginationReady(false)
+          return
         }
 
-        currentPage.push(index)
-        currentHeight += blockHeight
-      })
+        const measuredBlocks = Array.from(measure.children)
+        const nextPages = []
+        let currentPage = []
+        let currentHeight = 0
 
-      if (currentPage.length > 0 || nextPages.length === 0) nextPages.push(currentPage)
+        measuredBlocks.forEach((block, index) => {
+          const blockHeight = block.getBoundingClientRect().height
+          if (!Number.isFinite(blockHeight)) return
 
-      setPages((currentPages) =>
-        JSON.stringify(currentPages) === JSON.stringify(nextPages) ? currentPages : nextPages,
-      )
+          if (currentPage.length > 0 && currentHeight + blockHeight > contentHeight) {
+            nextPages.push(currentPage)
+            currentPage = []
+            currentHeight = 0
+          }
+
+          currentPage.push(index)
+          currentHeight += blockHeight
+        })
+
+        if (currentPage.length > 0 || nextPages.length === 0) nextPages.push(currentPage)
+        if (isDisposed) return
+
+        setPages((currentPages) =>
+          JSON.stringify(currentPages) === JSON.stringify(nextPages) ? currentPages : nextPages,
+        )
+        setPaginationReady(true)
+      } catch {
+        if (!isDisposed) setPaginationReady(false)
+      }
     }
 
-    const resizeObserver = new ResizeObserver(updatePages)
-    resizeObserver.observe(measure)
-    Array.from(measure.children).forEach((block) => resizeObserver.observe(block))
-    updatePages()
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(animationFrameId)
+      animationFrameId = window.requestAnimationFrame(updatePages)
+    }
 
-    return () => resizeObserver.disconnect()
+    let resizeObserver = null
+    if (typeof ResizeObserver !== 'undefined') {
+      try {
+        resizeObserver = new ResizeObserver(scheduleUpdate)
+        resizeObserver.observe(measure)
+      } catch {
+        resizeObserver = null
+      }
+    }
+
+    window.addEventListener('resize', scheduleUpdate)
+    scheduleUpdate()
+
+    return () => {
+      isDisposed = true
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', scheduleUpdate)
+      window.cancelAnimationFrame(animationFrameId)
+    }
   }, [children])
 
   return (
-    <div className="resume-preview-stack">
+    <div className={`resume-preview-stack ${paginationReady ? 'pagination-ready' : ''}`.trim()}>
       <div
         className={`resume-preview resume-preview-measure ${className}`.trim()}
         ref={measureRef}
@@ -523,6 +639,14 @@ const shortenUrl = (value) =>
     .replace(/^www\./i, '')
     .replace(/\/$/, '')
 
+const normalizePhoneLink = (value) => {
+  const trimmedValue = value?.trim() || ''
+  const digits = trimmedValue.replace(/\D/g, '')
+  if (digits.length < 3) return ''
+
+  return `tel:${trimmedValue.startsWith('+') ? '+' : ''}${digits}`
+}
+
 const defaultUrlDisplayMode = (label) => (label?.trim() ? 'label' : 'short')
 
 const formatUrlLabel = (label, value, displayMode) => {
@@ -543,7 +667,7 @@ function ContactItem({ label, value, href, displayMode }) {
 
   return linkTarget ? (
     <a
-      className={valueIsUrl ? 'personal-link' : ''}
+      className="contact-link"
       href={linkTarget}
       target={valueIsUrl ? '_blank' : undefined}
       rel={valueIsUrl ? 'noreferrer' : undefined}
@@ -1734,7 +1858,7 @@ function App() {
           <span>{t('Live preview')}</span>
         </div>
 
-        <PaginatedPreview
+        <SafePaginatedPreview
           className={template === 'modern' ? 'modern-template' : ''}
           pageLabel={t('Page')}
         >
@@ -1749,7 +1873,10 @@ function App() {
                   value={resume.personal.email}
                   href={`mailto:${resume.personal.email}`}
                 />
-                <ContactItem value={resume.personal.phone} href={`tel:${resume.personal.phone}`} />
+                <ContactItem
+                  value={resume.personal.phone}
+                  href={normalizePhoneLink(resume.personal.phone)}
+                />
                 <ContactItem value={resume.personal.location} />
               </div>
               {hasOptionalContactFields && (
@@ -1942,7 +2069,7 @@ function App() {
               ))}
             </PreviewSection>
           )}
-        </PaginatedPreview>
+        </SafePaginatedPreview>
       </section>
     </main>
   )

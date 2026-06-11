@@ -570,7 +570,10 @@ body {
 .custom-field-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-  align-items: end;
+  grid-template-areas:
+    "label value remove"
+    "display display display";
+  align-items: start;
   gap: 10px;
   padding: 11px;
   border: 1px solid #e2e8f0;
@@ -578,16 +581,38 @@ body {
   background: #f8fafc;
 }
 
+.custom-field-row > .field {
+  align-self: start;
+}
+
+.custom-field-row > .field:first-child {
+  grid-area: label;
+}
+
+.custom-field-row > .field:nth-child(2) {
+  grid-area: value;
+}
+
+.custom-field-row > .field span {
+  min-height: 15px;
+  line-height: 1.25;
+}
+
 .custom-field-remove {
-  min-height: 42px;
+  grid-area: remove;
+  width: auto;
+  height: 42px;
+  align-self: start;
+  margin-top: 21px;
   padding: 0 8px;
 }
 
 .custom-url-display {
   display: flex;
-  grid-column: 1 / -1;
+  grid-area: display;
   align-items: center;
   gap: 9px;
+  margin-top: 1px;
 }
 
 .custom-url-display > span {
@@ -1257,6 +1282,25 @@ body {
   overflow: hidden;
 }
 
+@supports not (aspect-ratio: 210 / 297) {
+  .preview-page-card {
+    min-height: 0;
+    overflow: visible;
+  }
+}
+
+.resume-preview-stack:not(.pagination-ready) .preview-page-card {
+  min-height: 0;
+  aspect-ratio: auto;
+  overflow: visible;
+}
+
+.simple-resume-preview {
+  min-height: 0;
+  aspect-ratio: auto;
+  overflow: visible;
+}
+
 .resume-preview-measure {
   position: absolute;
   z-index: -1;
@@ -1292,6 +1336,13 @@ body {
 
 .resume-print-preview {
   display: none;
+}
+
+@supports (height: 100dvh) {
+  .editor-panel,
+  .preview-panel {
+    height: 100dvh;
+  }
 }
 
 .resume-preview h1,
@@ -1553,11 +1604,17 @@ textarea:focus-visible {
 
   .custom-field-row {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "label"
+      "value"
+      "remove"
+      "display";
   }
 
   .custom-field-remove {
-    min-height: 0;
+    height: auto;
     justify-self: start;
+    margin-top: 0;
     padding: 5px 8px;
   }
 
@@ -1636,7 +1693,8 @@ textarea:focus-visible {
   .editor-panel,
   .preview-toolbar,
   .preview-page-cards,
-  .resume-preview-measure {
+  .resume-preview-measure,
+  .simple-resume-preview {
     display: none;
   }
 
