@@ -1692,32 +1692,52 @@ textarea:focus-visible {
 
   .editor-panel,
   .preview-toolbar,
-  .preview-page-cards,
   .resume-preview-measure,
+  .resume-print-preview,
   .simple-resume-preview {
     display: none;
   }
 
   .resume-preview-stack {
-    width: 100%;
+    width: 210mm;
     margin: 0;
   }
 
-  .resume-preview {
-    width: 100%;
-    aspect-ratio: auto;
-    min-height: 0;
+  .preview-page-cards {
+    display: block;
+    width: 210mm;
+    gap: 0;
+  }
+
+  .preview-page-shell {
+    width: 210mm;
+    height: 297mm;
     margin: 0;
-    padding: 14mm 16mm;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .preview-page-shell:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .preview-page-label {
+    display: none;
+  }
+
+  .resume-preview {
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    margin: 0;
+    border: 0;
     box-shadow: none;
+    overflow: hidden;
     color: #111827 !important;
     background: #ffffff !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
-  }
-
-  .resume-print-preview {
-    display: block;
   }
 
   .resume-section,
