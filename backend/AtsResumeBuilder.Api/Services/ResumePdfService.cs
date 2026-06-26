@@ -266,8 +266,12 @@ public class ResumePdfService : IResumePdfService
             var imageSource = NormalizeDataImageSource(resume.ProfilePhotoBase64);
             if (HasText(imageSource))
             {
-                sb.AppendLine("<div class=\"profile-photo-frame\">");
-                sb.Append("<img class=\"profile-photo\" src=\"").Append(Attr(imageSource)).AppendLine("\" alt=\"\">");
+                sb.Append("<div class=\"profile-photo-frame\" style=\"background-image: url('")
+                    .Append(Attr(imageSource))
+                    .AppendLine("')\">");
+                sb.Append("<img class=\"profile-photo\" src=\"")
+                    .Append(Attr(imageSource))
+                    .AppendLine("\" alt=\"\">");
                 sb.AppendLine("</div>");
             }
         }
@@ -540,7 +544,7 @@ public class ResumePdfService : IResumePdfService
         .resume-header {
           position: relative;
           padding-bottom: 13px;
-          border-bottom: 0.5px solid rgba(156, 163, 175, 0.55);
+          border-bottom: 0.4px solid rgba(156, 163, 175, 0.38);
           text-align: center;
           break-inside: avoid;
           page-break-inside: avoid;
@@ -570,27 +574,40 @@ public class ResumePdfService : IResumePdfService
         .profile-photo-frame {
           width: 82px;
           height: 82px;
+          min-width: 82px;
+          max-width: 82px;
+          min-height: 82px;
+          max-height: 82px;
           flex: 0 0 82px;
+          position: relative;
           overflow: hidden;
-          border-radius: 8px;
+          border-radius: 9px;
           border: 1px solid #d1d5db;
           display: flex;
           align-items: center;
           justify-content: center;
           align-self: flex-start;
-          clip-path: inset(0 round 8px);
+          aspect-ratio: 1 / 1;
+          background-position: center center;
+          background-repeat: no-repeat;
+          background-size: cover;
+          clip-path: inset(0 round 9px);
         }
 
         .profile-photo {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center center;
+          position: absolute;
+          inset: 0;
+          width: 82px !important;
+          height: 82px !important;
+          min-width: 82px;
+          max-width: 82px;
+          min-height: 82px;
+          max-height: 82px;
+          object-fit: cover !important;
+          object-position: center center !important;
           display: block;
-          max-width: none;
-          max-height: none;
           border: none;
-          border-radius: 7px;
+          border-radius: 8px;
           image-orientation: from-image;
         }
 
@@ -645,8 +662,8 @@ public class ResumePdfService : IResumePdfService
         .resume-section > h2 {
           margin: 0 0 7.5px;
           padding-bottom: 3px;
-          border-bottom: 0.5px solid rgba(75, 85, 99, 0.38);
-          color: #1f2937;
+          border-bottom: 0.4px solid rgba(156, 163, 175, 0.52);
+          color: #4b5563;
           font-size: 13.5px;
           line-height: 1.25;
           font-weight: 400;
@@ -681,21 +698,21 @@ public class ResumePdfService : IResumePdfService
 
         .resume-entry h3 {
           margin: 0 0 1px;
-          color: #1f2937;
+          color: #4b5563;
           font-size: 12.5px;
           line-height: 1.4;
           font-weight: 400;
         }
 
         .entry-subtitle {
-          color: #1f2937;
+          color: #374151;
           font-style: italic;
           font-weight: 400;
         }
 
         .entry-date {
           flex: 0 0 auto;
-          color: #1f2937;
+          color: #4b5563;
           font-weight: 400;
           white-space: nowrap;
         }
