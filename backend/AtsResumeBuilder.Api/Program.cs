@@ -14,7 +14,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("ReactFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(
+                "https://cvmakerly.vercel.app",
+                "https://ats-resume-builder-dusky.vercel.app",
+                "http://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -22,11 +25,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.Urls.Add("http://localhost:5000");
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-app.UseSwagger();
-app.UseSwaggerUI();
 app.UseCors("ReactFrontend");
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 
 app.Run();
