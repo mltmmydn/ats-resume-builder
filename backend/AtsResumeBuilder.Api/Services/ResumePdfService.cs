@@ -11,6 +11,9 @@ public class ResumePdfService : IResumePdfService
     private const string SecondaryTextColor = "#374151";
     private const string HeaderRuleColor = "#9CA3AF";
     private const string SectionRuleColor = "#4B5563";
+    private const float BaseFontSize = 9.4f;
+    private const float SectionContentTopSpacing = 5.25f;
+    private const float EntrySpacing = 7.5f;
 
     private sealed record ContactItem(string Text, string? Href = null);
 
@@ -28,7 +31,7 @@ public class ResumePdfService : IResumePdfService
                 page.PageColor(Colors.White);
                 page.DefaultTextStyle(style => style
                     .FontFamily("Arial", "Helvetica", "Liberation Sans", "DejaVu Sans")
-                    .FontSize(9.4f)
+                    .FontSize(BaseFontSize)
                     .LineHeight(1.45f)
                     .FontColor(TextColor));
 
@@ -120,7 +123,7 @@ public class ResumePdfService : IResumePdfService
                 {
                     if (index > 0)
                     {
-                        text.Span(" | ")
+                        text.Span("  |  ")
                             .FontSize(8.4f)
                             .LineHeight(1.4f)
                             .FontColor(HeaderRuleColor);
@@ -145,7 +148,7 @@ public class ResumePdfService : IResumePdfService
             return;
 
         AddSectionHeading(column, "PROFESSIONAL SUMMARY");
-        column.Item().Text(summary);
+        column.Item().PaddingTop(SectionContentTopSpacing).Text(summary);
     }
 
     private static void AddExperiences(
@@ -159,33 +162,45 @@ public class ResumePdfService : IResumePdfService
 
         AddSectionHeading(column, "WORK EXPERIENCE");
 
+        var isFirstEntry = true;
         foreach (var experience in populatedExperiences)
         {
             var dateRange = JoinDateRange(
                 experience.StartDate,
                 NormalizeCurrentWorkStatus(experience.EndDate, language));
 
-            column.Item().PaddingTop(7.5f).Row(row =>
+            column.Item().PaddingTop(isFirstEntry ? SectionContentTopSpacing : EntrySpacing).Row(row =>
             {
                 row.RelativeItem().Column(left =>
                 {
                     if (HasText(experience.JobTitle))
-                        left.Item().Text(experience.JobTitle!).FontSize(9.4f).SemiBold();
+                        left.Item().Text(experience.JobTitle!).FontSize(BaseFontSize).SemiBold();
 
                     var companyAndLocation = JoinNonEmpty(
                         experience.CompanyName,
                         experience.Location);
 
                     if (companyAndLocation.Length > 0)
-                        left.Item().Text(companyAndLocation).FontSize(9.1f).FontColor(SecondaryTextColor).Italic();
+                        left.Item().Text(companyAndLocation).FontSize(BaseFontSize).FontColor(SecondaryTextColor).Italic();
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.1f).SemiBold();
+                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(BaseFontSize).SemiBold();
             });
 
+            var isFirstResponsibility = true;
             foreach (var responsibility in (experience.Responsibilities ?? []).Where(HasText))
-                column.Item().PaddingTop(1).PaddingLeft(12.75f).Text($"\u2022 {responsibility.Trim()}").FontSize(9.4f);
+            {
+                column.Item()
+                    .PaddingTop(isFirstResponsibility ? 3 : 0.75f)
+                    .PaddingLeft(12.75f)
+                    .Text($"\u2022 {responsibility.Trim()}")
+                    .FontSize(BaseFontSize);
+
+                isFirstResponsibility = false;
+            }
+
+            isFirstEntry = false;
         }
     }
 
@@ -200,6 +215,7 @@ public class ResumePdfService : IResumePdfService
 
         AddSectionHeading(column, "EDUCATION");
 
+        var isFirstEntry = true;
         foreach (var item in populatedEducation)
         {
             var program = string.Join(" / ", new[] { item.Degree, item.Department }.Where(HasText));
@@ -212,20 +228,22 @@ public class ResumePdfService : IResumePdfService
 
             var dateRange = JoinDateRange(item.StartDate, item.EndDate);
 
-            column.Item().PaddingTop(7.5f).Row(row =>
+            column.Item().PaddingTop(isFirstEntry ? SectionContentTopSpacing : EntrySpacing).Row(row =>
             {
                 row.RelativeItem().Column(left =>
                 {
                     if (HasText(item.SchoolName))
-                        left.Item().Text(item.SchoolName!).FontSize(9.4f).SemiBold();
+                        left.Item().Text(item.SchoolName!).FontSize(BaseFontSize).SemiBold();
 
                     if (programAndGpa.Length > 0)
-                        left.Item().Text(programAndGpa).FontSize(9.1f).FontColor(SecondaryTextColor).Italic();
+                        left.Item().Text(programAndGpa).FontSize(BaseFontSize).FontColor(SecondaryTextColor).Italic();
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.1f).SemiBold();
+                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(BaseFontSize).SemiBold();
             });
+
+            isFirstEntry = false;
         }
     }
 
@@ -244,6 +262,7 @@ public class ResumePdfService : IResumePdfService
                 ? "GÖNÜLLÜ DENEYİM"
                 : "VOLUNTEER EXPERIENCE");
 
+        var isFirstEntry = true;
         foreach (var volunteer in populatedExperiences)
         {
             var endDate = volunteer.IsCurrent
@@ -251,27 +270,38 @@ public class ResumePdfService : IResumePdfService
                 : NormalizeCurrentWorkStatus(volunteer.EndDate, language);
             var dateRange = JoinDateRange(volunteer.StartDate, endDate);
 
-            column.Item().PaddingTop(7.5f).Row(row =>
+            column.Item().PaddingTop(isFirstEntry ? SectionContentTopSpacing : EntrySpacing).Row(row =>
             {
                 row.RelativeItem().Column(left =>
                 {
                     if (HasText(volunteer.Role))
-                        left.Item().Text(volunteer.Role!).FontSize(9.4f).SemiBold();
+                        left.Item().Text(volunteer.Role!).FontSize(BaseFontSize).SemiBold();
 
                     var organizationAndLocation = JoinNonEmpty(
                         volunteer.OrganizationName,
                         volunteer.Location);
 
                     if (organizationAndLocation.Length > 0)
-                        left.Item().Text(organizationAndLocation).FontSize(9.1f).FontColor(SecondaryTextColor).Italic();
+                        left.Item().Text(organizationAndLocation).FontSize(BaseFontSize).FontColor(SecondaryTextColor).Italic();
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.1f).SemiBold();
+                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(BaseFontSize).SemiBold();
             });
 
+            var isFirstResponsibility = true;
             foreach (var responsibility in (volunteer.Responsibilities ?? []).Where(HasText))
-                column.Item().PaddingTop(1).PaddingLeft(12.75f).Text($"\u2022 {responsibility.Trim()}").FontSize(9.4f);
+            {
+                column.Item()
+                    .PaddingTop(isFirstResponsibility ? 3 : 0.75f)
+                    .PaddingLeft(12.75f)
+                    .Text($"\u2022 {responsibility.Trim()}")
+                    .FontSize(BaseFontSize);
+
+                isFirstResponsibility = false;
+            }
+
+            isFirstEntry = false;
         }
     }
 
@@ -285,9 +315,14 @@ public class ResumePdfService : IResumePdfService
 
         AddSectionHeading(column, "PROJECTS");
 
+        var isFirstEntry = true;
         foreach (var project in populatedProjects)
         {
-            column.Item().PaddingTop(7.5f).Text(project.ProjectName ?? string.Empty).FontSize(9.4f).SemiBold();
+            column.Item()
+                .PaddingTop(isFirstEntry ? SectionContentTopSpacing : EntrySpacing)
+                .Text(project.ProjectName ?? string.Empty)
+                .FontSize(BaseFontSize)
+                .SemiBold();
 
             if (HasText(project.Description))
                 column.Item().Text(project.Description!);
@@ -295,9 +330,11 @@ public class ResumePdfService : IResumePdfService
             if (HasText(project.Technologies))
                 column.Item().Text(text =>
                 {
-                    text.Span("Technologies: ").FontSize(9.4f).SemiBold();
-                    text.Span(project.Technologies!.Trim()).FontSize(9.4f);
+                    text.Span("Technologies: ").FontSize(BaseFontSize).SemiBold();
+                    text.Span(project.Technologies!.Trim()).FontSize(BaseFontSize);
                 });
+
+            isFirstEntry = false;
         }
     }
 
@@ -312,6 +349,7 @@ public class ResumePdfService : IResumePdfService
 
         AddSectionHeading(column, "SKILLS");
 
+        var isFirstEntry = true;
         foreach (var skill in populatedSkills)
         {
             var values = string.Join(
@@ -325,11 +363,16 @@ public class ResumePdfService : IResumePdfService
 
             if (line.Length > 0)
             {
-                column.Item().PaddingBottom(1.5f).Text(text =>
-                {
-                    text.Span($"{category}: ").SemiBold();
-                    text.Span(values);
-                });
+                column.Item()
+                    .PaddingTop(isFirstEntry ? SectionContentTopSpacing : 0)
+                    .PaddingBottom(1.5f)
+                    .Text(text =>
+                    {
+                        text.Span($"{category}: ").SemiBold();
+                        text.Span(values);
+                    });
+
+                isFirstEntry = false;
             }
         }
     }
@@ -344,12 +387,14 @@ public class ResumePdfService : IResumePdfService
 
         AddSectionHeading(column, "LANGUAGES");
 
-        foreach (var language in populatedLanguages)
-        {
-            var line = JoinTitle(language.LanguageName, language.Level);
-            if (line.Length > 0)
-                column.Item().Text(line).FontSize(9.4f);
-        }
+        var line = string.Join(
+            " | ",
+            populatedLanguages
+                .Select(language => JoinTitle(language.LanguageName, language.Level))
+                .Where(value => value.Length > 0));
+
+        if (line.Length > 0)
+            column.Item().PaddingTop(SectionContentTopSpacing).Text(line).FontSize(BaseFontSize);
     }
 
     private static void AddCertificates(
@@ -383,12 +428,21 @@ public class ResumePdfService : IResumePdfService
                     row.ConstantItem(120)
                         .AlignRight()
                         .Text(certificate.Date!.Trim())
-                        .FontSize(9.1f)
+                        .FontSize(BaseFontSize)
                         .SemiBold();
             });
 
+            var isFirstDetail = true;
             foreach (var detail in (certificate.Details ?? []).Where(HasText))
-                column.Item().PaddingLeft(16.5f).Text($"\u2022 {detail.Trim()}").FontSize(9.1f);
+            {
+                column.Item()
+                    .PaddingTop(isFirstDetail ? 2.25f : 0.75f)
+                    .PaddingLeft(16.5f)
+                    .Text($"\u2022 {detail.Trim()}")
+                    .FontSize(BaseFontSize);
+
+                isFirstDetail = false;
+            }
         }
     }
 
@@ -403,7 +457,7 @@ public class ResumePdfService : IResumePdfService
         if (!string.Equals(referenceMode, "contacts", StringComparison.OrdinalIgnoreCase))
         {
             AddSectionHeading(column, "REFERENCES");
-            column.Item().Text("References available upon request.");
+            column.Item().PaddingTop(SectionContentTopSpacing).Text("References available upon request.");
             return;
         }
 
@@ -413,6 +467,7 @@ public class ResumePdfService : IResumePdfService
 
         AddSectionHeading(column, "REFERENCES");
 
+        var isFirstEntry = true;
         foreach (var reference in populatedReferences)
         {
             var role = JoinNonEmpty(reference.JobTitle, reference.Company);
@@ -420,10 +475,18 @@ public class ResumePdfService : IResumePdfService
             var contact = JoinNonEmpty(reference.Email, reference.Phone, reference.Relationship);
 
             if (heading.Length > 0)
-                column.Item().PaddingTop(7.5f).Text(heading).FontSize(9.4f).SemiBold();
+            {
+                column.Item()
+                    .PaddingTop(isFirstEntry ? SectionContentTopSpacing : EntrySpacing)
+                    .Text(heading)
+                    .FontSize(BaseFontSize)
+                    .SemiBold();
+            }
 
             if (contact.Length > 0)
                 AddReferenceContactLine(column, reference);
+
+            isFirstEntry = false;
         }
     }
 
@@ -435,9 +498,8 @@ public class ResumePdfService : IResumePdfService
             .BorderBottom(0.75f)
             .BorderColor(SectionRuleColor)
             .Text(heading)
-            .FontSize(10.2f)
+            .FontSize(10.1f)
             .LineHeight(1.25f)
-            .LetterSpacing(0.6f)
             .SemiBold();
     }
 
@@ -588,13 +650,14 @@ public class ResumePdfService : IResumePdfService
             foreach (var item in BuildReferenceContactItems(reference))
             {
                 if (index > 0)
-                    text.Span(" | ").FontSize(8.4f).FontColor(HeaderRuleColor);
+                    text.Span("  |  ").FontSize(BaseFontSize).FontColor(HeaderRuleColor);
 
                 var span = HasText(item.Href)
                     ? text.Hyperlink(item.Text, item.Href!)
                     : text.Span(item.Text);
 
-                span.FontSize(8.4f)
+                span.FontSize(BaseFontSize)
+                    .LineHeight(1.45f)
                     .FontColor(SecondaryTextColor);
 
                 index++;
