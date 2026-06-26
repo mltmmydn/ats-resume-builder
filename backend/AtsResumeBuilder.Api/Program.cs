@@ -18,6 +18,7 @@ builder.Services.AddCors(options =>
                 "https://cvmakerly.vercel.app",
                 "https://ats-resume-builder-dusky.vercel.app",
                 "http://localhost:5173")
+            .WithExposedHeaders("Content-Disposition")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

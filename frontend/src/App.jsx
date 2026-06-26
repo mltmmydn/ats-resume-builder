@@ -70,6 +70,8 @@ const turkishTranslations = {
     'Özgeçmiş önizlemenizi kontrol edin, ardından PDF olarak dışa aktarın.',
   'Could not download the PDF. Make sure the configured backend is running.':
     'PDF indirilemedi. Yapılandırılmış backend servisinin çalıştığından emin olun.',
+  'Could not generate the PDF. Please try again.':
+    'PDF oluşturulamadı. Lütfen tekrar deneyin.',
   'Live preview': 'Canlı önizleme',
   'Personal Information': 'Kişisel Bilgiler',
   'Full Name': 'Ad Soyad',
@@ -405,6 +407,20 @@ const isSafariLikeBrowser = () => {
   return isIOS || isMacSafari
 }
 
+const isMobilePdfExportBrowser = () => {
+  if (typeof navigator === 'undefined') return false
+
+  const userAgent = navigator.userAgent || ''
+  const platform = navigator.platform || ''
+  const maxTouchPoints = navigator.maxTouchPoints || 0
+  const isIOS =
+    /iPad|iPhone|iPod/i.test(userAgent) ||
+    (platform === 'MacIntel' && maxTouchPoints > 1)
+  const isMobileUserAgent = /Android|Mobile|CriOS|FxiOS|EdgiOS/i.test(userAgent)
+
+  return isIOS || isMobileUserAgent
+}
+
 function SimplePreview({ children, className = '' }) {
   return (
     <div className="resume-preview-stack simple-preview-stack">
@@ -472,6 +488,7 @@ function PaginatedPreview({
   return (
     <MeasuredPaginatedPreview
       className={className}
+      forcePagination={forcePagination}
       pageLabel={pageLabel}
       renderPrintSafeRoot={renderPrintSafeRoot}
     >
@@ -483,6 +500,7 @@ function PaginatedPreview({
 function MeasuredPaginatedPreview({
   children,
   className = '',
+  forcePagination = false,
   pageLabel,
   renderPrintSafeRoot = false,
 }) {
@@ -640,7 +658,7 @@ function MeasuredPaginatedPreview({
             aria-hidden="true"
           >
             <div
-              className={`resume-preview-stack ${
+              className={`resume-preview-stack print-export-pagination ${
                 paginationReady ? 'pagination-ready' : ''
               }`.trim()}
             >
@@ -652,7 +670,11 @@ function MeasuredPaginatedPreview({
       : null
 
   return (
-    <div className={`resume-preview-stack ${paginationReady ? 'pagination-ready' : ''}`.trim()}>
+    <div
+      className={`resume-preview-stack ${forcePagination ? 'print-export-pagination' : ''} ${
+        paginationReady ? 'pagination-ready' : ''
+      }`.trim()}
+    >
       <div
         className={`resume-preview resume-preview-measure ${className}`.trim()}
         ref={measureRef}
@@ -966,6 +988,7 @@ function App() {
   const [theme, setTheme] = useState(getInitialTheme)
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
   const [isPrintExporting, setIsPrintExporting] = useState(false)
+  const [isRasterPdfExporting, setIsRasterPdfExporting] = useState(false)
   const [pdfError, setPdfError] = useState('')
   const t = (text) =>
     language === 'tr'
@@ -987,6 +1010,14 @@ function App() {
       document.body.classList.remove('resume-print-export-active')
     }
   }, [isPrintExporting])
+
+  useEffect(() => {
+    document.body.classList.toggle('resume-raster-export-active', isRasterPdfExporting)
+
+    return () => {
+      document.body.classList.remove('resume-raster-export-active')
+    }
+  }, [isRasterPdfExporting])
 
   useEffect(() => {
     if (!isPrintExporting) return undefined
@@ -1177,6 +1208,23 @@ function App() {
     return safeName ? `${safeName}_ATS_Resume.pdf` : 'ATS_Resume.pdf'
   }
 
+  const parseContentDispositionFileName = (contentDisposition) => {
+    if (!contentDisposition) return ''
+
+    const cleanHeaderValue = (value) => value.trim().replace(/^"|"$/g, '')
+    const encodedFileName = contentDisposition.match(/filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i)
+    if (encodedFileName?.[1]) {
+      try {
+        return decodeURIComponent(cleanHeaderValue(encodedFileName[1]))
+      } catch {
+        return cleanHeaderValue(encodedFileName[1])
+      }
+    }
+
+    const fileName = contentDisposition.match(/filename\s*=\s*("[^"]+"|[^;]+)/i)
+    return fileName?.[1] ? cleanHeaderValue(fileName[1]) : ''
+  }
+
   const createBackendResume = () => ({
     language,
     template,
@@ -1265,14 +1313,17 @@ function App() {
       if (!response.ok) throw new Error(`PDF request failed with status ${response.status}`)
 
       const blob = await response.blob()
+      const serverFileName = parseContentDispositionFileName(
+        response.headers.get('Content-Disposition'),
+      )
       const downloadUrl = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = downloadUrl
-      link.download = createPdfFileName(resume.personal.fullName)
+      link.download = serverFileName || createPdfFileName(resume.personal.fullName)
       document.body.appendChild(link)
       link.click()
       link.remove()
-      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0)
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 30000)
     } catch {
       setPdfError(
         t('Could not download the PDF. Make sure the configured backend is running.'),
@@ -1306,18 +1357,76 @@ function App() {
       })
     })
 
+  const downloadMobilePreviewPdf = async () => {
+    const pageCards = Array.from(
+      document.querySelectorAll(
+        '.print-safe-export-root[data-pagination-ready="true"] .print-safe-page-card',
+      ),
+    )
+
+    if (pageCards.length === 0) throw new Error('No preview pages are ready for PDF export.')
+
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ])
+    const pdfDocument = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+    })
+
+    for (const [index, pageCard] of pageCards.entries()) {
+      const canvas = await html2canvas(pageCard, {
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        scale: 2,
+        useCORS: true,
+        windowHeight: pageCard.scrollHeight,
+        windowWidth: pageCard.scrollWidth,
+      })
+      const imageData = canvas.toDataURL('image/jpeg', 0.92)
+
+      if (index > 0) pdfDocument.addPage('a4', 'portrait')
+      pdfDocument.addImage(imageData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST')
+    }
+
+    pdfDocument.save(createPdfFileName(resume.personal.fullName))
+  }
+
   const downloadClientPdf = async () => {
     if (isDownloadingPdf) return
 
+    const shouldUseMobilePdfExport = isMobilePdfExportBrowser()
     setPdfError('')
     setIsDownloadingPdf(true)
+    setIsRasterPdfExporting(shouldUseMobilePdfExport)
     setIsPrintExporting(true)
-    await waitForPrintSafePreview()
-    window.print()
-    window.setTimeout(() => {
+
+    try {
+      await waitForPrintSafePreview()
+
+      if (shouldUseMobilePdfExport) {
+        await downloadMobilePreviewPdf()
+        setIsPrintExporting(false)
+        setIsRasterPdfExporting(false)
+        setIsDownloadingPdf(false)
+        return
+      }
+
+      window.print()
+      window.setTimeout(() => {
+        setIsPrintExporting(false)
+        setIsDownloadingPdf(false)
+      }, 30000)
+    } catch {
+      setPdfError(t('Could not generate the PDF. Please try again.'))
       setIsPrintExporting(false)
+      setIsRasterPdfExporting(false)
       setIsDownloadingPdf(false)
-    }, 30000)
+    }
   }
 
   const populatedCustomFields = resume.personal.customFields.filter(

@@ -7,6 +7,13 @@ namespace AtsResumeBuilder.Api.Services;
 
 public class ResumePdfService : IResumePdfService
 {
+    private const string TextColor = "#111827";
+    private const string SecondaryTextColor = "#374151";
+    private const string HeaderRuleColor = "#9CA3AF";
+    private const string SectionRuleColor = "#4B5563";
+
+    private sealed record ContactItem(string Text, string? Href = null);
+
     public byte[] GeneratePdf(ResumeDto resume)
     {
         var profilePhoto = GetProfilePhoto(resume);
@@ -16,16 +23,18 @@ public class ResumePdfService : IResumePdfService
             document.Page(page =>
             {
                 page.Size(PageSizes.A4);
-                page.Margin(40);
+                page.MarginVertical(43.5f);
+                page.MarginHorizontal(48);
                 page.PageColor(Colors.White);
                 page.DefaultTextStyle(style => style
-                    .FontSize(10.5f)
-                    .LineHeight(1.35f)
-                    .FontColor(Colors.Black));
+                    .FontFamily("Arial", "Helvetica", "Liberation Sans", "DejaVu Sans")
+                    .FontSize(9.4f)
+                    .LineHeight(1.45f)
+                    .FontColor(TextColor));
 
                 page.Content().Column(column =>
                 {
-                    column.Spacing(3);
+                    column.Spacing(0);
                     AddHeader(column, resume.PersonalInfo, profilePhoto);
                     AddSummary(column, resume.PersonalInfo?.Summary);
                     AddExperiences(column, resume.Experiences ?? [], resume.Language);
@@ -46,52 +55,88 @@ public class ResumePdfService : IResumePdfService
         PersonalInfoDto? personalInfo,
         byte[]? profilePhoto)
     {
-        if (profilePhoto is not null)
+        column.Item().Column(header =>
         {
-            column.Item()
-                .AlignRight()
-                .Width(72)
-                .Height(72)
-                .Image(profilePhoto)
-                .FitArea();
-        }
+            header.Spacing(0);
+
+            if (profilePhoto is not null)
+            {
+                header.Item()
+                    .AlignRight()
+                    .Width(61.5f)
+                    .Height(61.5f)
+                    .Image(profilePhoto)
+                    .FitArea();
+            }
+
+            header.Item()
+                .AlignCenter()
+                .Text((personalInfo?.FullName ?? string.Empty).ToUpperInvariant())
+                .FontSize(21)
+                .LineHeight(1.1f)
+                .Bold();
+
+            if (!string.IsNullOrWhiteSpace(personalInfo?.JobTitle))
+            {
+                header.Item()
+                    .PaddingTop(4.5f)
+                    .AlignCenter()
+                    .Text(personalInfo.JobTitle)
+                    .FontSize(10.9f)
+                    .LineHeight(1.2f)
+                    .SemiBold();
+            }
+
+            var contactItems = BuildPrimaryContactItems(personalInfo).ToList();
+            if (contactItems.Count > 0)
+                AddContactLine(header, contactItems, 6);
+
+            var optionalContacts = personalInfo?.CustomFields?
+                .Where(field => HasText(field.Value) && (HasText(field.Label) || IsUrl(field.Value!)))
+                .Select(BuildCustomContactItem)
+                .Where(item => HasText(item.Text))
+                .ToList() ?? [];
+
+            if (optionalContacts.Count > 0)
+                AddContactLine(header, optionalContacts, 3);
+        });
 
         column.Item()
-            .AlignCenter()
-            .Text(personalInfo?.FullName ?? string.Empty)
-            .FontSize(20)
-            .Bold();
+            .PaddingTop(9)
+            .BorderBottom(0.75f)
+            .BorderColor(HeaderRuleColor);
+    }
 
-        if (!string.IsNullOrWhiteSpace(personalInfo?.JobTitle))
-            column.Item().AlignCenter().Text(personalInfo.JobTitle).FontSize(12).SemiBold();
+    private static void AddContactLine(ColumnDescriptor column, IReadOnlyCollection<ContactItem> items, float topPadding)
+    {
+        column.Item()
+            .PaddingTop(topPadding)
+            .Text(text =>
+            {
+                text.AlignCenter();
 
-        var contact = JoinNonEmpty(
-            personalInfo?.Email,
-            personalInfo?.Phone,
-            personalInfo?.Location);
+                var index = 0;
+                foreach (var item in items)
+                {
+                    if (index > 0)
+                    {
+                        text.Span(" | ")
+                            .FontSize(8.4f)
+                            .LineHeight(1.4f)
+                            .FontColor(HeaderRuleColor);
+                    }
 
-        if (contact.Length > 0)
-            column.Item().AlignCenter().Text(contact).FontSize(9);
+                    var span = HasText(item.Href)
+                        ? text.Hyperlink(item.Text, item.Href!)
+                        : text.Span(item.Text);
 
-        var optionalContacts = personalInfo?.CustomFields?
-            .Where(field => HasText(field.Value) && (HasText(field.Label) || IsUrl(field.Value!)))
-            .Select(field => LabeledValue(
-                field.Label,
-                field.Value,
-                HasText(field.DisplayMode)
-                    ? field.DisplayMode
-                    : HasText(field.Label) ? "label" : "short"))
-            .ToList() ?? [];
+                    span.FontSize(8.4f)
+                        .LineHeight(1.4f)
+                        .FontColor(SecondaryTextColor);
 
-        var populatedOptionalContacts = optionalContacts
-            .Where(HasText)
-            .Select(value => value!)
-            .ToArray();
-
-        if (populatedOptionalContacts.Length > 0)
-            column.Item().AlignCenter().Text(string.Join(" | ", populatedOptionalContacts)).FontSize(9);
-
-        column.Item().PaddingTop(5).BorderBottom(1).BorderColor(Colors.Grey.Medium);
+                    index++;
+                }
+            });
     }
 
     private static void AddSummary(ColumnDescriptor column, string? summary)
@@ -120,27 +165,27 @@ public class ResumePdfService : IResumePdfService
                 experience.StartDate,
                 NormalizeCurrentWorkStatus(experience.EndDate, language));
 
-            column.Item().PaddingTop(3).Row(row =>
+            column.Item().PaddingTop(7.5f).Row(row =>
             {
                 row.RelativeItem().Column(left =>
                 {
                     if (HasText(experience.JobTitle))
-                        left.Item().Text(experience.JobTitle!).SemiBold();
+                        left.Item().Text(experience.JobTitle!).FontSize(9.4f).SemiBold();
 
                     var companyAndLocation = JoinNonEmpty(
                         experience.CompanyName,
                         experience.Location);
 
                     if (companyAndLocation.Length > 0)
-                        left.Item().Text(companyAndLocation).FontSize(9.5f).Italic();
+                        left.Item().Text(companyAndLocation).FontSize(9.1f).FontColor(SecondaryTextColor).Italic();
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.5f).SemiBold();
+                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.1f).SemiBold();
             });
 
             foreach (var responsibility in (experience.Responsibilities ?? []).Where(HasText))
-                column.Item().PaddingLeft(10).Text($"\u2022 {responsibility.Trim()}");
+                column.Item().PaddingTop(1).PaddingLeft(12.75f).Text($"\u2022 {responsibility.Trim()}").FontSize(9.4f);
         }
     }
 
@@ -167,19 +212,19 @@ public class ResumePdfService : IResumePdfService
 
             var dateRange = JoinDateRange(item.StartDate, item.EndDate);
 
-            column.Item().PaddingTop(3).Row(row =>
+            column.Item().PaddingTop(7.5f).Row(row =>
             {
                 row.RelativeItem().Column(left =>
                 {
                     if (HasText(item.SchoolName))
-                        left.Item().Text(item.SchoolName!).SemiBold();
+                        left.Item().Text(item.SchoolName!).FontSize(9.4f).SemiBold();
 
                     if (programAndGpa.Length > 0)
-                        left.Item().Text(programAndGpa).FontSize(9.5f).Italic();
+                        left.Item().Text(programAndGpa).FontSize(9.1f).FontColor(SecondaryTextColor).Italic();
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.5f).SemiBold();
+                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.1f).SemiBold();
             });
         }
     }
@@ -206,27 +251,27 @@ public class ResumePdfService : IResumePdfService
                 : NormalizeCurrentWorkStatus(volunteer.EndDate, language);
             var dateRange = JoinDateRange(volunteer.StartDate, endDate);
 
-            column.Item().PaddingTop(3).Row(row =>
+            column.Item().PaddingTop(7.5f).Row(row =>
             {
                 row.RelativeItem().Column(left =>
                 {
                     if (HasText(volunteer.Role))
-                        left.Item().Text(volunteer.Role!).SemiBold();
+                        left.Item().Text(volunteer.Role!).FontSize(9.4f).SemiBold();
 
                     var organizationAndLocation = JoinNonEmpty(
                         volunteer.OrganizationName,
                         volunteer.Location);
 
                     if (organizationAndLocation.Length > 0)
-                        left.Item().Text(organizationAndLocation).FontSize(9.5f).Italic();
+                        left.Item().Text(organizationAndLocation).FontSize(9.1f).FontColor(SecondaryTextColor).Italic();
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.5f).SemiBold();
+                    row.ConstantItem(120).AlignRight().Text(dateRange).FontSize(9.1f).SemiBold();
             });
 
             foreach (var responsibility in (volunteer.Responsibilities ?? []).Where(HasText))
-                column.Item().PaddingLeft(10).Text($"\u2022 {responsibility.Trim()}");
+                column.Item().PaddingTop(1).PaddingLeft(12.75f).Text($"\u2022 {responsibility.Trim()}").FontSize(9.4f);
         }
     }
 
@@ -242,13 +287,17 @@ public class ResumePdfService : IResumePdfService
 
         foreach (var project in populatedProjects)
         {
-            column.Item().PaddingTop(3).Text(project.ProjectName ?? string.Empty).SemiBold();
+            column.Item().PaddingTop(7.5f).Text(project.ProjectName ?? string.Empty).FontSize(9.4f).SemiBold();
 
             if (HasText(project.Description))
                 column.Item().Text(project.Description!);
 
             if (HasText(project.Technologies))
-                column.Item().Text($"Technologies: {project.Technologies}").FontSize(9);
+                column.Item().Text(text =>
+                {
+                    text.Span("Technologies: ").FontSize(9.4f).SemiBold();
+                    text.Span(project.Technologies!.Trim()).FontSize(9.4f);
+                });
         }
     }
 
@@ -275,7 +324,13 @@ public class ResumePdfService : IResumePdfService
             var line = values.Length > 0 ? $"{category}: {values}" : string.Empty;
 
             if (line.Length > 0)
-                column.Item().Text(line);
+            {
+                column.Item().PaddingBottom(1.5f).Text(text =>
+                {
+                    text.Span($"{category}: ").SemiBold();
+                    text.Span(values);
+                });
+            }
         }
     }
 
@@ -293,7 +348,7 @@ public class ResumePdfService : IResumePdfService
         {
             var line = JoinTitle(language.LanguageName, language.Level);
             if (line.Length > 0)
-                column.Item().Text(line);
+                column.Item().Text(line).FontSize(9.4f);
         }
     }
 
@@ -309,7 +364,7 @@ public class ResumePdfService : IResumePdfService
 
         foreach (var certificate in populatedCertificates)
         {
-            column.Item().PaddingTop(3).Row(row =>
+            column.Item().PaddingTop(5.25f).Row(row =>
             {
                 row.RelativeItem().Text(text =>
                 {
@@ -328,12 +383,12 @@ public class ResumePdfService : IResumePdfService
                     row.ConstantItem(120)
                         .AlignRight()
                         .Text(certificate.Date!.Trim())
-                        .FontSize(9.5f)
+                        .FontSize(9.1f)
                         .SemiBold();
             });
 
             foreach (var detail in (certificate.Details ?? []).Where(HasText))
-                column.Item().PaddingLeft(14).Text($"\u2022 {detail.Trim()}").FontSize(9.5f);
+                column.Item().PaddingLeft(16.5f).Text($"\u2022 {detail.Trim()}").FontSize(9.1f);
         }
     }
 
@@ -365,23 +420,25 @@ public class ResumePdfService : IResumePdfService
             var contact = JoinNonEmpty(reference.Email, reference.Phone, reference.Relationship);
 
             if (heading.Length > 0)
-                column.Item().PaddingTop(3).Text(heading).SemiBold();
+                column.Item().PaddingTop(7.5f).Text(heading).FontSize(9.4f).SemiBold();
 
             if (contact.Length > 0)
-                column.Item().Text(contact).FontSize(9);
+                AddReferenceContactLine(column, reference);
         }
     }
 
     private static void AddSectionHeading(ColumnDescriptor column, string heading)
     {
         column.Item()
-            .PaddingTop(8)
-            .PaddingBottom(2)
-            .BorderBottom(1)
-            .BorderColor(Colors.Grey.Darken2)
+            .PaddingTop(11.25f)
+            .PaddingBottom(2.25f)
+            .BorderBottom(0.75f)
+            .BorderColor(SectionRuleColor)
             .Text(heading)
-            .FontSize(12)
-            .Bold();
+            .FontSize(10.2f)
+            .LineHeight(1.25f)
+            .LetterSpacing(0.6f)
+            .SemiBold();
     }
 
     private static byte[]? GetProfilePhoto(ResumeDto resume)
@@ -499,6 +556,64 @@ public class ResumePdfService : IResumePdfService
                HasText(reference.Relationship);
     }
 
+    private static IEnumerable<ContactItem> BuildPrimaryContactItems(PersonalInfoDto? personalInfo)
+    {
+        if (HasText(personalInfo?.Email))
+            yield return new ContactItem(personalInfo!.Email!.Trim(), CreateMailtoLink(personalInfo.Email));
+
+        if (HasText(personalInfo?.Phone))
+            yield return new ContactItem(personalInfo!.Phone!.Trim());
+
+        if (HasText(personalInfo?.Location))
+            yield return new ContactItem(personalInfo!.Location!.Trim());
+    }
+
+    private static ContactItem BuildCustomContactItem(CustomFieldDto field)
+    {
+        var text = LabeledValue(
+            field.Label,
+            field.Value,
+            HasText(field.DisplayMode)
+                ? field.DisplayMode
+                : HasText(field.Label) ? "label" : "short") ?? string.Empty;
+
+        return new ContactItem(text, IsUrl(field.Value ?? string.Empty) ? NormalizeUrl(field.Value!) : null);
+    }
+
+    private static void AddReferenceContactLine(ColumnDescriptor column, ReferenceDto reference)
+    {
+        column.Item().Text(text =>
+        {
+            var index = 0;
+            foreach (var item in BuildReferenceContactItems(reference))
+            {
+                if (index > 0)
+                    text.Span(" | ").FontSize(8.4f).FontColor(HeaderRuleColor);
+
+                var span = HasText(item.Href)
+                    ? text.Hyperlink(item.Text, item.Href!)
+                    : text.Span(item.Text);
+
+                span.FontSize(8.4f)
+                    .FontColor(SecondaryTextColor);
+
+                index++;
+            }
+        });
+    }
+
+    private static IEnumerable<ContactItem> BuildReferenceContactItems(ReferenceDto reference)
+    {
+        if (HasText(reference.Email))
+            yield return new ContactItem(reference.Email!.Trim(), CreateMailtoLink(reference.Email));
+
+        if (HasText(reference.Phone))
+            yield return new ContactItem(reference.Phone!.Trim());
+
+        if (HasText(reference.Relationship))
+            yield return new ContactItem(reference.Relationship!.Trim());
+    }
+
     private static string? LabeledValue(string? label, string? value, string? displayMode = null)
     {
         if (!HasText(value))
@@ -535,6 +650,21 @@ public class ResumePdfService : IResumePdfService
             normalizedValue,
             @"^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:[/:?#][^\s]*)?$",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    private static string NormalizeUrl(string value)
+    {
+        var normalizedValue = value.Trim();
+
+        return normalizedValue.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+               normalizedValue.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? normalizedValue
+            : $"https://{normalizedValue}";
+    }
+
+    private static string CreateMailtoLink(string email)
+    {
+        return $"mailto:{email.Trim()}";
     }
 
     private static string ShortenUrl(string value)

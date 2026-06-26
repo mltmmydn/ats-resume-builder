@@ -1,6 +1,7 @@
 using AtsResumeBuilder.Api.Dtos;
 using AtsResumeBuilder.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using System.Text.RegularExpressions;
 
 namespace AtsResumeBuilder.Api.Controllers;
@@ -21,7 +22,16 @@ public class ResumeController : ControllerBase
     public ActionResult GeneratePdf([FromBody] ResumeDto resume)
     {
         var pdf = _resumePdfService.GeneratePdf(resume);
-        return File(pdf, "application/pdf", CreatePdfFileName(resume.PersonalInfo?.FullName));
+        var fileName = CreatePdfFileName(resume.PersonalInfo?.FullName);
+        var contentDisposition = new ContentDispositionHeaderValue("attachment")
+        {
+            FileName = fileName,
+            FileNameStar = fileName,
+        };
+
+        Response.Headers.ContentDisposition = contentDisposition.ToString();
+
+        return File(pdf, "application/pdf", fileName);
     }
 
     private static string CreatePdfFileName(string? fullName)
