@@ -69,6 +69,9 @@ const turkishTranslations = {
     'Özgeçmiş önizlemenizi kontrol edin, ardından PDF olarak dışa aktarın.',
   'Could not download the PDF. Make sure the configured backend is running.':
     'PDF indirilemedi. Yapılandırılmış backend servisinin çalıştığından emin olun.',
+  'Could not generate the PDF in this browser.':
+    'PDF bu tarayıcıda oluşturulamadı.',
+  'Generates a PDF in your browser.': 'PDF dosyasını tarayıcınızda oluşturur.',
   'Live preview': 'Canlı önizleme',
   'Personal Information': 'Kişisel Bilgiler',
   'Full Name': 'Ad Soyad',
@@ -1189,6 +1192,120 @@ function App() {
     }
   }
 
+  const createClientPdfResume = () => ({
+    personal: {
+      fullName: resume.personal.fullName.trim(),
+      jobTitle: resume.personal.jobTitle.trim(),
+      contactItems: [
+        resume.personal.email,
+        resume.personal.phone,
+        resume.personal.location,
+        ...populatedCustomFields.map((field) => {
+          const cleanLabel = field.label?.trim().replace(/:+$/, '')
+          const displayValue = isUrl(field.value)
+            ? field.displayMode === 'full'
+              ? field.value.trim()
+              : shortenUrl(field.value)
+            : field.value.trim()
+
+          return [cleanLabel, displayValue].filter(Boolean).join(': ')
+        }),
+      ]
+        .map((item) => item?.trim())
+        .filter(Boolean),
+      summary: resume.personal.summary.trim(),
+    },
+    experiences: populatedExperiences.map((experience) => ({
+      title: (experience.title || t('Job Title')).trim(),
+      subtitle: [experience.company, experience.location].filter(Boolean).join(' | '),
+      date: [experience.startDate, roleEndDate(experience)].filter(Boolean).join(' - '),
+      responsibilities: responsibilityLines(experience.responsibilities),
+    })),
+    volunteerExperiences: populatedVolunteerExperiences.map((volunteer) => ({
+      title: (volunteer.role || t('Role / Position')).trim(),
+      subtitle: [volunteer.organizationName, volunteer.location].filter(Boolean).join(' | '),
+      date: [volunteer.startDate, roleEndDate(volunteer)].filter(Boolean).join(' - '),
+      responsibilities: responsibilityLines(volunteer.responsibilities),
+    })),
+    education: populatedEducation.map((education) => ({
+      school: (education.school || t('School Name')).trim(),
+      program: educationProgramLine(education),
+      date: [education.startDate, education.endDate].filter(Boolean).join(' - '),
+    })),
+    projects: populatedProjects.map((project) => ({
+      name: (project.name || t('Project Name')).trim(),
+      description: project.description.trim(),
+      technologies: project.technologies.trim(),
+    })),
+    skills: populatedSkills.map((skill) => ({
+      category: skillCategoryLabel(skill.category),
+      items: skill.items.trim(),
+    })),
+    languages: populatedLanguages
+      .map((spokenLanguage) =>
+        [spokenLanguage.name, spokenLanguage.level].filter(Boolean).join(' - '),
+      )
+      .filter(Boolean),
+    certificates: populatedCertificates.map((certificate) => ({
+      name: (certificate.name || t('Certificate Name')).trim(),
+      issuer: certificate.issuer.trim(),
+      date: certificate.date.trim(),
+      details: responsibilityLines(certificate.details),
+    })),
+    references: {
+      mode: resume.referenceMode,
+      contacts: populatedReferences.map((reference) => ({
+        name: (reference.fullName || t('Full Name')).trim(),
+        role: [reference.jobTitle, reference.company].filter(Boolean).join(', '),
+        contact: [reference.email, reference.phone, reference.relationship]
+          .filter(Boolean)
+          .join(' | '),
+      })),
+    },
+  })
+
+  const createClientPdfLabels = () => ({
+    certificates: t('Certificates'),
+    education: t('Education'),
+    languages: t('Languages'),
+    projects: t('Projects'),
+    references: t('References'),
+    referencesUponRequest: t('References available upon request.'),
+    skills: t('Skills'),
+    summary: t('Professional Summary'),
+    technologies: t('Technologies'),
+    volunteerExperience: t('Volunteer Experience'),
+    workExperience: t('Work Experience'),
+    yourName: t('Your Name'),
+  })
+
+  const downloadClientPdf = async () => {
+    setIsDownloadingPdf(true)
+    setPdfError('')
+
+    try {
+      const [{ pdf }, { default: AtsResumePdf }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('./AtsResumePdf.jsx'),
+      ])
+      const blob = await pdf(
+        <AtsResumePdf resume={createClientPdfResume()} labels={createClientPdfLabels()} />,
+      ).toBlob()
+      const downloadUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = createPdfFileName(resume.personal.fullName)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 30000)
+    } catch {
+      setPdfError(t('Could not generate the PDF in this browser.'))
+    } finally {
+      setIsDownloadingPdf(false)
+    }
+  }
+
   const populatedCustomFields = resume.personal.customFields.filter(
     (field) => field.value.trim() && (field.label.trim() || isUrl(field.value)),
   )
@@ -1267,14 +1384,15 @@ function App() {
                 </>
               ) : (
                 <>
-                  <button type="button" className="download-button" onClick={() => window.print()}>
-                    {t('Save as PDF')}
+                  <button
+                    type="button"
+                    className="download-button"
+                    onClick={downloadClientPdf}
+                    disabled={isDownloadingPdf}
+                  >
+                    {t(isDownloadingPdf ? 'Generating PDF...' : 'Download PDF')}
                   </button>
-                  <span>
-                    {t(
-                      'Your resume will open in the browser print dialog. Choose “Save as PDF” to download it.',
-                    )}
-                  </span>
+                  <span>{t('Generates a PDF in your browser.')}</span>
                 </>
               )}
             </div>
@@ -1840,8 +1958,13 @@ function App() {
                 </button>
               </>
             ) : (
-              <button type="button" className="download-button" onClick={() => window.print()}>
-                {t('Save as PDF')}
+              <button
+                type="button"
+                className="download-button"
+                onClick={downloadClientPdf}
+                disabled={isDownloadingPdf}
+              >
+                {t(isDownloadingPdf ? 'Generating PDF...' : 'Download PDF')}
               </button>
             )}
           </div>
