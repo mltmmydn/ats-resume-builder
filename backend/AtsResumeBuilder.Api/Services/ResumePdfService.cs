@@ -536,7 +536,7 @@ public class ResumePdfService : IResumePdfService
         .resume-header {
           position: relative;
           padding-bottom: 13px;
-          border-bottom: 1px solid #9ca3af;
+          border-bottom: 0.75px solid #9ca3af;
           text-align: center;
           break-inside: avoid;
           page-break-inside: avoid;
@@ -566,19 +566,27 @@ public class ResumePdfService : IResumePdfService
         .profile-photo {
           width: 82px;
           height: 82px;
+          min-width: 82px;
+          min-height: 82px;
+          max-width: 82px;
+          max-height: 82px;
+          aspect-ratio: 1 / 1;
           flex: 0 0 82px;
           align-self: flex-start;
           border: 1px solid #d1d5db;
           border-radius: 6px;
           display: block;
+          overflow: hidden;
+          image-orientation: from-image;
           object-fit: cover;
+          object-position: center center;
         }
 
         .resume-header h1 {
           margin: 0;
           font-size: 28px;
           line-height: 1.1;
-          font-weight: 600;
+          font-weight: 500;
           letter-spacing: 0;
           text-transform: uppercase;
         }
@@ -586,7 +594,7 @@ public class ResumePdfService : IResumePdfService
         .resume-title {
           margin: 6px 0 9px;
           font-size: 14.5px;
-          font-weight: 600;
+          font-weight: 500;
         }
 
         .contact-line {
@@ -625,10 +633,10 @@ public class ResumePdfService : IResumePdfService
         .resume-section > h2 {
           margin: 0 0 7.5px;
           padding-bottom: 3px;
-          border-bottom: 1px solid #4b5563;
+          border-bottom: 0.75px solid #4b5563;
           font-size: 13.5px;
           line-height: 1.25;
-          font-weight: 600;
+          font-weight: 500;
           letter-spacing: 0.8px;
           text-transform: uppercase;
         }
@@ -662,7 +670,7 @@ public class ResumePdfService : IResumePdfService
           margin: 0 0 1px;
           font-size: 12.5px;
           line-height: 1.4;
-          font-weight: 600;
+          font-weight: 500;
         }
 
         .entry-subtitle {
@@ -672,7 +680,7 @@ public class ResumePdfService : IResumePdfService
 
         .entry-date {
           flex: 0 0 auto;
-          font-weight: 600;
+          font-weight: 500;
           white-space: nowrap;
         }
 
@@ -722,7 +730,7 @@ public class ResumePdfService : IResumePdfService
         }
 
         .resume-preview strong {
-          font-weight: 600;
+          font-weight: 500;
         }
         """;
 
@@ -839,7 +847,36 @@ public class ResumePdfService : IResumePdfService
         if (trimmedValue.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
             return trimmedValue;
 
-        return $"data:image/png;base64,{trimmedValue}";
+        return $"data:{DetectImageMimeType(trimmedValue)};base64,{trimmedValue}";
+    }
+
+    private static string DetectImageMimeType(string base64Image)
+    {
+        try
+        {
+            var image = Convert.FromBase64String(base64Image);
+            if (image.Length >= 3 && image[0] == 0xFF && image[1] == 0xD8 && image[2] == 0xFF)
+                return "image/jpeg";
+
+            if (image.Length >= 8 &&
+                image[0] == 0x89 &&
+                image[1] == 0x50 &&
+                image[2] == 0x4E &&
+                image[3] == 0x47 &&
+                image[4] == 0x0D &&
+                image[5] == 0x0A &&
+                image[6] == 0x1A &&
+                image[7] == 0x0A)
+            {
+                return "image/png";
+            }
+        }
+        catch (FormatException)
+        {
+            // The browser renderer will fail this image and fall back to QuestPDF if the PDF is invalid.
+        }
+
+        return "image/png";
     }
 
     private static string Html(string? value) => WebUtility.HtmlEncode(value?.Trim() ?? string.Empty);
