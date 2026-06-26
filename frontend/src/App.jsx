@@ -4,6 +4,7 @@ import './App.css'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '') || ''
 const backendPdfEnabled = Boolean(apiBaseUrl)
+const backendPdfRequestTimeoutMs = 20000
 
 const emptyExperience = {
   company: '',
@@ -70,6 +71,10 @@ const turkishTranslations = {
     'Özgeçmiş önizlemenizi kontrol edin, ardından PDF olarak dışa aktarın.',
   'Could not download the PDF. Make sure the configured backend is running.':
     'PDF indirilemedi. Yapılandırılmış backend servisinin çalıştığından emin olun.',
+  'Backend PDF is temporarily unavailable. Opening the browser Save as PDF fallback instead.':
+    'Backend PDF geçici olarak kullanılamıyor. Bunun yerine tarayıcı PDF kaydetme yedeği açılıyor.',
+  'Backend PDF is temporarily unavailable. Opening the browser print fallback instead. On iPhone or mobile browsers, the PDF preview may open; use Share → Save to Files to save it.':
+    'Backend PDF geçici olarak kullanılamıyor. Bunun yerine tarayıcı yazdırma yedeği açılıyor. iPhone veya mobil tarayıcılarda PDF önizlemesi açılabilir; kaydetmek için Paylaş → Dosyalara Kaydet seçeneğini kullanın.',
   'Could not generate the PDF. Please try again.':
     'PDF oluşturulamadı. Lütfen tekrar deneyin.',
   'Live preview': 'Canlı önizleme',
@@ -1225,6 +1230,25 @@ function App() {
     return fileName?.[1] ? cleanHeaderValue(fileName[1]) : ''
   }
 
+  const isValidPdfResponse = (arrayBuffer, contentType) => {
+    if (!arrayBuffer || arrayBuffer.byteLength < 5) return false
+    if (!contentType.toLowerCase().includes('application/pdf')) return false
+
+    const previewBytes = new Uint8Array(arrayBuffer.slice(0, Math.min(1024, arrayBuffer.byteLength)))
+    for (let index = 0; index <= previewBytes.length - 4; index += 1) {
+      if (
+        previewBytes[index] === 0x25 &&
+        previewBytes[index + 1] === 0x50 &&
+        previewBytes[index + 2] === 0x44 &&
+        previewBytes[index + 3] === 0x46
+      ) {
+        return true
+      }
+    }
+
+    return false
+  }
+
   const createBackendResume = () => ({
     language,
     template,
@@ -1303,16 +1327,27 @@ function App() {
     setIsDownloadingPdf(true)
     setPdfError('')
 
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), backendPdfRequestTimeoutMs)
+    let printFallbackStarted = false
+
     try {
       const response = await fetch(`${apiBaseUrl}/api/resume/generate-pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createBackendResume()),
+        signal: controller.signal,
       })
 
       if (!response.ok) throw new Error(`PDF request failed with status ${response.status}`)
 
-      const blob = await response.blob()
+      const contentType = response.headers.get('Content-Type') || ''
+      const arrayBuffer = await response.arrayBuffer()
+      if (!isValidPdfResponse(arrayBuffer, contentType)) {
+        throw new Error('PDF request returned an invalid PDF response')
+      }
+
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' })
       const serverFileName = parseContentDispositionFileName(
         response.headers.get('Content-Disposition'),
       )
@@ -1324,12 +1359,26 @@ function App() {
       link.click()
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 30000)
-    } catch {
-      setPdfError(
-        t('Could not download the PDF. Make sure the configured backend is running.'),
-      )
-    } finally {
       setIsDownloadingPdf(false)
+    } catch {
+      const fallbackMessage = isMobilePdfExportBrowser()
+        ? t(
+            'Backend PDF is temporarily unavailable. Opening the browser print fallback instead. On iPhone or mobile browsers, the PDF preview may open; use Share → Save to Files to save it.',
+          )
+        : t(
+            'Backend PDF is temporarily unavailable. Opening the browser Save as PDF fallback instead.',
+          )
+
+      try {
+        printFallbackStarted = true
+        await openBrowserPrintFallback(fallbackMessage)
+      } catch {
+        printFallbackStarted = false
+        setPdfError(t('Could not generate the PDF. Please try again.'))
+      }
+    } finally {
+      window.clearTimeout(timeoutId)
+      if (!printFallbackStarted) setIsDownloadingPdf(false)
     }
   }
 
@@ -1356,6 +1405,21 @@ function App() {
         window.requestAnimationFrame(checkForPages)
       })
     })
+
+  const openBrowserPrintFallback = async (message) => {
+    setPdfError(message)
+    setIsRasterPdfExporting(false)
+    setIsPrintExporting(true)
+
+    await waitForPrintSafePreview()
+    await new Promise((resolve) => window.setTimeout(resolve, 250))
+
+    window.print()
+    window.setTimeout(() => {
+      setIsPrintExporting(false)
+      setIsDownloadingPdf(false)
+    }, 30000)
+  }
 
   const downloadMobilePreviewPdf = async () => {
     const pageCards = Array.from(
