@@ -265,7 +265,11 @@ public class ResumePdfService : IResumePdfService
         {
             var imageSource = NormalizeDataImageSource(resume.ProfilePhotoBase64);
             if (HasText(imageSource))
+            {
+                sb.AppendLine("<div class=\"profile-photo-frame\">");
                 sb.Append("<img class=\"profile-photo\" src=\"").Append(Attr(imageSource)).AppendLine("\" alt=\"\">");
+                sb.AppendLine("</div>");
+            }
         }
 
         sb.AppendLine("</header>");
@@ -536,7 +540,7 @@ public class ResumePdfService : IResumePdfService
         .resume-header {
           position: relative;
           padding-bottom: 13px;
-          border-bottom: 0.75px solid #9ca3af;
+          border-bottom: 0.5px solid rgba(156, 163, 175, 0.7);
           text-align: center;
           break-inside: avoid;
           page-break-inside: avoid;
@@ -563,23 +567,30 @@ public class ResumePdfService : IResumePdfService
           justify-content: flex-start;
         }
 
-        .profile-photo {
+        .profile-photo-frame {
           width: 82px;
           height: 82px;
-          min-width: 82px;
-          min-height: 82px;
-          max-width: 82px;
-          max-height: 82px;
-          aspect-ratio: 1 / 1;
           flex: 0 0 82px;
-          align-self: flex-start;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
-          display: block;
           overflow: hidden;
-          image-orientation: from-image;
+          border-radius: 6px;
+          border: 1px solid #d1d5db;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          align-self: flex-start;
+        }
+
+        .profile-photo {
+          width: 100%;
+          height: 100%;
           object-fit: cover;
           object-position: center center;
+          display: block;
+          max-width: none;
+          max-height: none;
+          border: none;
+          border-radius: 0;
+          image-orientation: from-image;
         }
 
         .resume-header h1 {
@@ -594,7 +605,7 @@ public class ResumePdfService : IResumePdfService
         .resume-title {
           margin: 6px 0 9px;
           font-size: 14.5px;
-          font-weight: 500;
+          font-weight: 400;
         }
 
         .contact-line {
@@ -633,10 +644,10 @@ public class ResumePdfService : IResumePdfService
         .resume-section > h2 {
           margin: 0 0 7.5px;
           padding-bottom: 3px;
-          border-bottom: 0.75px solid #4b5563;
+          border-bottom: 0.5px solid rgba(75, 85, 99, 0.65);
           font-size: 13.5px;
           line-height: 1.25;
-          font-weight: 500;
+          font-weight: 400;
           letter-spacing: 0.8px;
           text-transform: uppercase;
         }
@@ -670,7 +681,7 @@ public class ResumePdfService : IResumePdfService
           margin: 0 0 1px;
           font-size: 12.5px;
           line-height: 1.4;
-          font-weight: 500;
+          font-weight: 400;
         }
 
         .entry-subtitle {
@@ -680,7 +691,7 @@ public class ResumePdfService : IResumePdfService
 
         .entry-date {
           flex: 0 0 auto;
-          font-weight: 500;
+          font-weight: 400;
           white-space: nowrap;
         }
 
@@ -729,8 +740,9 @@ public class ResumePdfService : IResumePdfService
           line-height: 1.45;
         }
 
-        .resume-preview strong {
-          font-weight: 500;
+        .resume-preview strong,
+        .resume-preview b {
+          font-weight: 400;
         }
         """;
 
