@@ -21,7 +21,7 @@ public class ResumeController : ControllerBase
     [Produces("application/pdf")]
     public ActionResult GeneratePdf([FromBody] ResumeDto resume)
     {
-        var pdf = _resumePdfService.GeneratePdf(resume);
+        var result = _resumePdfService.GeneratePdf(resume);
         var fileName = CreatePdfFileName(resume.PersonalInfo?.FullName);
         var contentDisposition = new ContentDispositionHeaderValue("attachment")
         {
@@ -30,8 +30,9 @@ public class ResumeController : ControllerBase
         };
 
         Response.Headers.ContentDisposition = contentDisposition.ToString();
+        Response.Headers["X-Pdf-Engine"] = result.Engine;
 
-        return File(pdf, "application/pdf", fileName);
+        return File(result.Pdf, "application/pdf", fileName);
     }
 
     private static string CreatePdfFileName(string? fullName)
