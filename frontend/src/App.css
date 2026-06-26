@@ -1688,6 +1688,8 @@ textarea:focus-visible {
 .print-safe-export-root .resume-preview-stack {
   width: 210mm;
   margin: 0;
+  padding: 0;
+  overflow: visible;
 }
 
 .print-safe-export-root .preview-page-cards {
@@ -1696,30 +1698,30 @@ textarea:focus-visible {
   gap: 0;
 }
 
-.print-safe-export-root .preview-page-shell {
+.print-safe-export-root .print-safe-page-card {
+  box-sizing: border-box;
+  display: block;
   width: 210mm;
   height: 297mm;
-  margin: 0;
-  break-after: page;
-  page-break-after: always;
-}
-
-.print-safe-export-root .preview-page-shell:last-child {
-  break-after: auto;
-  page-break-after: auto;
-}
-
-.print-safe-export-root .resume-preview {
-  width: 210mm;
-  height: 297mm;
-  min-height: 297mm;
+  min-height: 0;
+  max-height: 297mm;
+  aspect-ratio: auto;
   margin: 0;
   padding: 58px 64px;
   border: 0;
   box-shadow: none;
   overflow: hidden;
+  break-after: page;
+  break-inside: avoid;
   color: #111827;
   background: #ffffff;
+  page-break-after: always;
+  page-break-inside: avoid;
+}
+
+.print-safe-export-root .print-safe-page-card:last-child {
+  break-after: auto;
+  page-break-after: auto;
 }
 
 .print-safe-export-root .entry-heading,
@@ -1732,11 +1734,12 @@ textarea:focus-visible {
 }
 
 @page {
-  size: A4;
+  size: A4 portrait;
   margin: 0;
 }
 
 @media print {
+  html,
   body,
   #root,
   .app-shell,
@@ -1754,6 +1757,7 @@ textarea:focus-visible {
     display: block;
   }
 
+  body.resume-print-export-active #root,
   body.resume-print-export-active .app-shell {
     display: none;
   }
@@ -1768,6 +1772,40 @@ textarea:focus-visible {
     overflow: visible;
     visibility: visible;
     pointer-events: auto;
+  }
+
+  body.resume-print-export-active .print-safe-export-root .print-safe-page-cards {
+    display: block;
+    width: 210mm;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  body.resume-print-export-active .print-safe-export-root .print-safe-page-card {
+    box-sizing: border-box;
+    display: block;
+    width: 210mm;
+    height: 297mm;
+    min-height: 0;
+    max-height: 297mm;
+    aspect-ratio: auto;
+    margin: 0;
+    padding: 58px 64px;
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+    break-after: page;
+    break-inside: avoid;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+
+  body.resume-print-export-active
+    .print-safe-export-root
+    .print-safe-page-card:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 
   .editor-panel,

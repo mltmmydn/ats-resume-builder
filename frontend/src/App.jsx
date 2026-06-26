@@ -614,6 +614,23 @@ function MeasuredPaginatedPreview({
     </div>
   )
 
+  const renderPrintSafePageCards = () => (
+    <div className="preview-page-cards print-safe-page-cards">
+      {pages.map((page, pageIndex) => (
+        <article
+          className={`resume-preview preview-page-card print-safe-page-card ${className}`.trim()}
+          key={pageIndex}
+        >
+          {page.map((blockIndex) => (
+            <div className="preview-page-block" key={blockIndex}>
+              {blocks[blockIndex]}
+            </div>
+          ))}
+        </article>
+      ))}
+    </div>
+  )
+
   const printSafeRoot =
     renderPrintSafeRoot && typeof document !== 'undefined'
       ? createPortal(
@@ -627,7 +644,7 @@ function MeasuredPaginatedPreview({
                 paginationReady ? 'pagination-ready' : ''
               }`.trim()}
             >
-              {renderPageCards(false)}
+              {renderPrintSafePageCards()}
             </div>
           </div>,
           document.body,
