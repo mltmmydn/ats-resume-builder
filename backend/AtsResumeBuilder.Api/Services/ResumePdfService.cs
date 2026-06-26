@@ -2,6 +2,9 @@ using AtsResumeBuilder.Api.Dtos;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
@@ -12,8 +15,9 @@ public class ResumePdfService : IResumePdfService
 {
     private const string TextColor = "#111827";
     private const string SecondaryTextColor = "#374151";
-    private const string HeaderRuleColor = "#9CA3AF";
-    private const string SectionRuleColor = "#4B5563";
+    private const string HeadingTextColor = "#4B5563";
+    private const string HeaderRuleColor = "#D1D5DB";
+    private const string SectionRuleColor = "#D1D5DB";
     private const float PxToPoint = 0.75f;
     private const float BaseFontSize = 9.4f;
     private const float ContactFontSize = 8.4f;
@@ -23,6 +27,8 @@ public class ResumePdfService : IResumePdfService
     private const float SectionContentTopSpacing = 5.25f;
     private const float EntrySpacing = 7.5f;
     private const float DateColumnWidth = 120;
+    private const int ProfilePhotoPixelSize = 82;
+    private const int ProfilePhotoCornerRadius = 9;
     private static readonly string[] ChromeExecutableCandidates =
     [
         "/usr/bin/google-chrome",
@@ -263,7 +269,7 @@ public class ResumePdfService : IResumePdfService
 
         if (isModern)
         {
-            var imageSource = NormalizeDataImageSource(resume.ProfilePhotoBase64);
+            var imageSource = NormalizeProfilePhotoDataUri(resume.ProfilePhotoBase64);
             if (HasText(imageSource))
             {
                 sb.Append("<div class=\"profile-photo-frame\" style=\"background-image: url('")
@@ -884,6 +890,15 @@ public class ResumePdfService : IResumePdfService
         return $"data:{DetectImageMimeType(trimmedValue)};base64,{trimmedValue}";
     }
 
+    private static string NormalizeProfilePhotoDataUri(string? value)
+    {
+        var imageBytes = DecodeProfilePhotoBytes(value);
+        if (imageBytes is not null && TryCreateRoundedSquareProfilePhoto(imageBytes, out var normalizedImage))
+            return $"data:image/png;base64,{Convert.ToBase64String(normalizedImage)}";
+
+        return NormalizeDataImageSource(value);
+    }
+
     private static string DetectImageMimeType(string base64Image)
     {
         try
@@ -976,7 +991,7 @@ public class ResumePdfService : IResumePdfService
 
         column.Item()
             .PaddingTop(9)
-            .BorderBottom(0.75f)
+            .BorderBottom(0.35f)
             .BorderColor(HeaderRuleColor);
     }
 
@@ -989,7 +1004,7 @@ public class ResumePdfService : IResumePdfService
         name.Text((personalInfo?.FullName ?? string.Empty).ToUpperInvariant())
             .FontSize(HeaderNameFontSize)
             .LineHeight(1.1f)
-            .Bold();
+            .FontColor(TextColor);
 
         if (!string.IsNullOrWhiteSpace(personalInfo?.JobTitle))
         {
@@ -1000,7 +1015,7 @@ public class ResumePdfService : IResumePdfService
             title.Text(personalInfo.JobTitle)
                 .FontSize(HeaderTitleFontSize)
                 .LineHeight(1.2f)
-                .SemiBold();
+                .FontColor(TextColor);
         }
 
         var contactItems = BuildPrimaryContactItems(personalInfo).ToList();
@@ -1093,7 +1108,7 @@ public class ResumePdfService : IResumePdfService
                     left.Spacing(1 * PxToPoint);
 
                     if (HasText(experience.JobTitle))
-                        left.Item().Text(experience.JobTitle!).FontSize(BaseFontSize).SemiBold();
+                        left.Item().Text(experience.JobTitle!).FontSize(BaseFontSize).FontColor(HeadingTextColor);
 
                     var companyAndLocation = JoinNonEmpty(
                         experience.CompanyName,
@@ -1104,7 +1119,7 @@ public class ResumePdfService : IResumePdfService
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).SemiBold();
+                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor);
             });
 
             var isFirstResponsibility = true;
@@ -1156,14 +1171,14 @@ public class ResumePdfService : IResumePdfService
                     left.Spacing(1 * PxToPoint);
 
                     if (HasText(item.SchoolName))
-                        left.Item().Text(item.SchoolName!).FontSize(BaseFontSize).SemiBold();
+                        left.Item().Text(item.SchoolName!).FontSize(BaseFontSize).FontColor(HeadingTextColor);
 
                     if (programAndGpa.Length > 0)
                         left.Item().Text(programAndGpa).FontSize(BaseFontSize).FontColor(SecondaryTextColor).Italic();
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).SemiBold();
+                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor);
             });
 
             isFirstEntry = false;
@@ -1202,7 +1217,7 @@ public class ResumePdfService : IResumePdfService
                     left.Spacing(1 * PxToPoint);
 
                     if (HasText(volunteer.Role))
-                        left.Item().Text(volunteer.Role!).FontSize(BaseFontSize).SemiBold();
+                        left.Item().Text(volunteer.Role!).FontSize(BaseFontSize).FontColor(HeadingTextColor);
 
                     var organizationAndLocation = JoinNonEmpty(
                         volunteer.OrganizationName,
@@ -1213,7 +1228,7 @@ public class ResumePdfService : IResumePdfService
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).SemiBold();
+                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor);
             });
 
             var isFirstResponsibility = true;
@@ -1249,7 +1264,7 @@ public class ResumePdfService : IResumePdfService
                 .PaddingTop(isFirstEntry ? SectionContentTopSpacing : EntrySpacing)
                 .Text(project.ProjectName ?? string.Empty)
                 .FontSize(BaseFontSize)
-                .SemiBold();
+                .FontColor(HeadingTextColor);
 
             if (HasText(project.Description))
                 column.Item().Text(project.Description!);
@@ -1257,7 +1272,7 @@ public class ResumePdfService : IResumePdfService
             if (HasText(project.Technologies))
                 column.Item().Text(text =>
                 {
-                    text.Span("Technologies: ").FontSize(BaseFontSize).SemiBold();
+                    text.Span("Technologies: ").FontSize(BaseFontSize).FontColor(HeadingTextColor);
                     text.Span(project.Technologies!.Trim()).FontSize(BaseFontSize);
                 });
 
@@ -1295,7 +1310,7 @@ public class ResumePdfService : IResumePdfService
                     .PaddingBottom(1.5f)
                     .Text(text =>
                     {
-                        text.Span($"{category}: ").SemiBold();
+                        text.Span($"{category}: ").FontColor(HeadingTextColor);
                         text.Span(values);
                     });
 
@@ -1345,7 +1360,7 @@ public class ResumePdfService : IResumePdfService
                     var hasName = HasText(certificate.CertificateName);
 
                     if (hasName)
-                        text.Span($"\u2022 {certificate.CertificateName!.Trim()}").SemiBold();
+                        text.Span($"\u2022 {certificate.CertificateName!.Trim()}").FontColor(HeadingTextColor);
 
                     if (HasText(certificate.Issuer))
                         text.Span(hasName
@@ -1358,7 +1373,7 @@ public class ResumePdfService : IResumePdfService
                         .AlignRight()
                         .Text(certificate.Date!.Trim())
                         .FontSize(BaseFontSize)
-                        .SemiBold();
+                        .FontColor(HeadingTextColor);
             });
 
             var isFirstDetail = true;
@@ -1409,7 +1424,7 @@ public class ResumePdfService : IResumePdfService
                     .PaddingTop(isFirstEntry ? SectionContentTopSpacing : EntrySpacing)
                     .Text(heading)
                     .FontSize(BaseFontSize)
-                    .SemiBold();
+                    .FontColor(HeadingTextColor);
             }
 
             if (contact.Length > 0)
@@ -1424,12 +1439,12 @@ public class ResumePdfService : IResumePdfService
         column.Item()
             .PaddingTop(11.25f)
             .PaddingBottom(2.25f)
-            .BorderBottom(0.75f)
+            .BorderBottom(0.35f)
             .BorderColor(SectionRuleColor)
             .Text(heading)
             .FontSize(10.1f)
             .LineHeight(1.25f)
-            .SemiBold();
+            .FontColor(HeadingTextColor);
     }
 
     private static byte[]? GetProfilePhoto(ResumeDto resume)
@@ -1442,21 +1457,85 @@ public class ResumePdfService : IResumePdfService
 
         try
         {
-            var base64 = resume.ProfilePhotoBase64!;
-            var separatorIndex = base64.IndexOf(',');
+            var image = DecodeProfilePhotoBytes(resume.ProfilePhotoBase64);
+            if (image is null)
+                return null;
 
-            if (base64.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
-                separatorIndex >= 0)
-            {
-                base64 = base64[(separatorIndex + 1)..];
-            }
-
-            var image = Convert.FromBase64String(base64);
-            return IsSupportedImage(image) ? image : null;
+            return TryCreateRoundedSquareProfilePhoto(image, out var normalizedImage)
+                ? normalizedImage
+                : image;
         }
         catch (FormatException)
         {
             return null;
+        }
+    }
+
+    private static byte[]? DecodeProfilePhotoBytes(string? value)
+    {
+        if (!HasText(value))
+            return null;
+
+        var base64 = value!.Trim();
+        var separatorIndex = base64.IndexOf(',');
+
+        if (base64.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
+            separatorIndex >= 0)
+        {
+            base64 = base64[(separatorIndex + 1)..];
+        }
+
+        var image = Convert.FromBase64String(base64);
+        return IsSupportedImage(image) ? image : null;
+    }
+
+    private static bool TryCreateRoundedSquareProfilePhoto(byte[] imageBytes, out byte[] normalizedImage)
+    {
+        normalizedImage = [];
+
+        try
+        {
+            using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageBytes);
+            image.Mutate(context => context.Resize(new ResizeOptions
+            {
+                Size = new SixLabors.ImageSharp.Size(ProfilePhotoPixelSize, ProfilePhotoPixelSize),
+                Mode = ResizeMode.Crop,
+                Position = AnchorPositionMode.Center,
+            }));
+
+            ApplyRoundedCornerMask(image, ProfilePhotoCornerRadius);
+
+            using var output = new MemoryStream();
+            image.SaveAsPng(output);
+            normalizedImage = output.ToArray();
+            return normalizedImage.Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void ApplyRoundedCornerMask(SixLabors.ImageSharp.Image<Rgba32> image, int radius)
+    {
+        var width = image.Width;
+        var height = image.Height;
+        var radiusSquared = radius * radius;
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var cornerX = x < radius ? radius - x - 1 : x >= width - radius ? x - (width - radius) : 0;
+                var cornerY = y < radius ? radius - y - 1 : y >= height - radius ? y - (height - radius) : 0;
+
+                if (cornerX == 0 || cornerY == 0 || cornerX * cornerX + cornerY * cornerY <= radiusSquared)
+                    continue;
+
+                var pixel = image[x, y];
+                pixel.A = 0;
+                image[x, y] = pixel;
+            }
         }
     }
 
