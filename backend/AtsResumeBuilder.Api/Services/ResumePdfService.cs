@@ -506,7 +506,10 @@ public class ResumePdfService : IResumePdfService
 
         body {
           color: #111827;
-          font: 12.5px/1.45 Arial, Helvetica, sans-serif;
+          font: 400 12.5px/1.45 Arial, Helvetica, sans-serif;
+          font-synthesis: none;
+          text-rendering: geometricPrecision;
+          -webkit-font-smoothing: antialiased;
         }
 
         a {
@@ -518,6 +521,8 @@ public class ResumePdfService : IResumePdfService
           width: 100%;
           color: #111827;
           background: #ffffff;
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
         }
 
         .resume-preview h1,
@@ -530,9 +535,11 @@ public class ResumePdfService : IResumePdfService
 
         .resume-header {
           position: relative;
-          padding-bottom: 12px;
+          padding-bottom: 13px;
           border-bottom: 1px solid #9ca3af;
           text-align: center;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
 
         .resume-header-content {
@@ -560,8 +567,10 @@ public class ResumePdfService : IResumePdfService
           width: 82px;
           height: 82px;
           flex: 0 0 82px;
+          align-self: flex-start;
           border: 1px solid #d1d5db;
           border-radius: 6px;
+          display: block;
           object-fit: cover;
         }
 
@@ -569,25 +578,25 @@ public class ResumePdfService : IResumePdfService
           margin: 0;
           font-size: 28px;
           line-height: 1.1;
-          font-weight: 700;
+          font-weight: 600;
           letter-spacing: 0;
           text-transform: uppercase;
         }
 
         .resume-title {
-          margin: 6px 0 8px;
+          margin: 6px 0 9px;
           font-size: 14.5px;
-          font-weight: 700;
+          font-weight: 600;
         }
 
         .contact-line {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
-          gap: 4px 0;
+          gap: 5px 0;
           color: #374151;
           font-size: 11.2px;
-          line-height: 1.4;
+          line-height: 1.45;
         }
 
         .contact-line > *:not(:last-child)::after {
@@ -603,21 +612,23 @@ public class ResumePdfService : IResumePdfService
         }
 
         .optional-contact-line {
-          margin-top: 4px;
+          margin-top: 5px;
         }
 
         .resume-section {
-          margin-top: 15px;
+          margin-top: 16.5px;
           break-inside: avoid;
+          break-inside: avoid-page;
+          page-break-inside: avoid;
         }
 
         .resume-section > h2 {
-          margin: 0 0 7px;
+          margin: 0 0 7.5px;
           padding-bottom: 3px;
           border-bottom: 1px solid #4b5563;
           font-size: 13.5px;
           line-height: 1.25;
-          font-weight: 700;
+          font-weight: 600;
           letter-spacing: 0.8px;
           text-transform: uppercase;
         }
@@ -628,8 +639,10 @@ public class ResumePdfService : IResumePdfService
 
         .resume-entry,
         .reference-entry {
-          margin-bottom: 10px;
+          margin-bottom: 11px;
           break-inside: avoid;
+          break-inside: avoid-page;
+          page-break-inside: avoid;
         }
 
         .resume-entry:last-child,
@@ -642,14 +655,14 @@ public class ResumePdfService : IResumePdfService
           align-items: flex-start;
           justify-content: space-between;
           gap: 16px;
-          margin-bottom: 3px;
+          margin-bottom: 3.5px;
         }
 
         .resume-entry h3 {
           margin: 0 0 1px;
           font-size: 12.5px;
           line-height: 1.4;
-          font-weight: 700;
+          font-weight: 600;
         }
 
         .entry-subtitle {
@@ -659,28 +672,31 @@ public class ResumePdfService : IResumePdfService
 
         .entry-date {
           flex: 0 0 auto;
-          font-weight: 700;
+          font-weight: 600;
           white-space: nowrap;
         }
 
         .resume-entry ul {
-          margin: 4px 0 0;
+          margin: 4.5px 0 0;
           padding-left: 17px;
         }
 
         .resume-entry li {
-          margin-bottom: 1px;
+          margin-bottom: 1.5px;
           padding-left: 1px;
+          line-height: 1.45;
         }
 
         .skills-list {
           display: grid;
-          gap: 2px;
+          gap: 2.5px;
         }
 
         .certificate-entry {
-          margin-bottom: 7px;
+          margin-bottom: 7.5px;
           break-inside: avoid;
+          break-inside: avoid-page;
+          page-break-inside: avoid;
         }
 
         .certificate-entry:last-child {
@@ -695,13 +711,18 @@ public class ResumePdfService : IResumePdfService
         }
 
         .certificate-details {
-          margin: 3px 0 0;
+          margin: 3.5px 0 0;
           padding-left: 22px;
         }
 
         .certificate-details li {
-          margin-bottom: 1px;
+          margin-bottom: 1.5px;
           padding-left: 1px;
+          line-height: 1.45;
+        }
+
+        .resume-preview strong {
+          font-weight: 600;
         }
         """;
 
