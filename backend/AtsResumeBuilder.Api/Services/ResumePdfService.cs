@@ -540,7 +540,7 @@ public class ResumePdfService : IResumePdfService
         .resume-header {
           position: relative;
           padding-bottom: 13px;
-          border-bottom: 0.5px solid rgba(156, 163, 175, 0.7);
+          border-bottom: 0.5px solid rgba(156, 163, 175, 0.55);
           text-align: center;
           break-inside: avoid;
           page-break-inside: avoid;
@@ -572,12 +572,13 @@ public class ResumePdfService : IResumePdfService
           height: 82px;
           flex: 0 0 82px;
           overflow: hidden;
-          border-radius: 6px;
+          border-radius: 8px;
           border: 1px solid #d1d5db;
           display: flex;
           align-items: center;
           justify-content: center;
           align-self: flex-start;
+          clip-path: inset(0 round 8px);
         }
 
         .profile-photo {
@@ -589,7 +590,7 @@ public class ResumePdfService : IResumePdfService
           max-width: none;
           max-height: none;
           border: none;
-          border-radius: 0;
+          border-radius: 7px;
           image-orientation: from-image;
         }
 
@@ -644,7 +645,8 @@ public class ResumePdfService : IResumePdfService
         .resume-section > h2 {
           margin: 0 0 7.5px;
           padding-bottom: 3px;
-          border-bottom: 0.5px solid rgba(75, 85, 99, 0.65);
+          border-bottom: 0.5px solid rgba(75, 85, 99, 0.38);
+          color: #1f2937;
           font-size: 13.5px;
           line-height: 1.25;
           font-weight: 400;
@@ -679,18 +681,21 @@ public class ResumePdfService : IResumePdfService
 
         .resume-entry h3 {
           margin: 0 0 1px;
+          color: #1f2937;
           font-size: 12.5px;
           line-height: 1.4;
           font-weight: 400;
         }
 
         .entry-subtitle {
-          color: #374151;
+          color: #1f2937;
           font-style: italic;
+          font-weight: 400;
         }
 
         .entry-date {
           flex: 0 0 auto;
+          color: #1f2937;
           font-weight: 400;
           white-space: nowrap;
         }
