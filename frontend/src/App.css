@@ -1667,6 +1667,70 @@ textarea:focus-visible {
   }
 }
 
+.print-safe-export-root {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  z-index: -1;
+  width: 210mm;
+  min-height: 297mm;
+  overflow: visible;
+  visibility: hidden;
+  pointer-events: none;
+  background: #ffffff;
+}
+
+.print-safe-export-root,
+.print-safe-export-root * {
+  transform: none !important;
+}
+
+.print-safe-export-root .resume-preview-stack {
+  width: 210mm;
+  margin: 0;
+}
+
+.print-safe-export-root .preview-page-cards {
+  display: block;
+  width: 210mm;
+  gap: 0;
+}
+
+.print-safe-export-root .preview-page-shell {
+  width: 210mm;
+  height: 297mm;
+  margin: 0;
+  break-after: page;
+  page-break-after: always;
+}
+
+.print-safe-export-root .preview-page-shell:last-child {
+  break-after: auto;
+  page-break-after: auto;
+}
+
+.print-safe-export-root .resume-preview {
+  width: 210mm;
+  height: 297mm;
+  min-height: 297mm;
+  margin: 0;
+  padding: 58px 64px;
+  border: 0;
+  box-shadow: none;
+  overflow: hidden;
+  color: #111827;
+  background: #ffffff;
+}
+
+.print-safe-export-root .entry-heading,
+.print-safe-export-root .certificate-heading {
+  display: flex;
+}
+
+.print-safe-export-root .entry-date {
+  margin-top: 0;
+}
+
 @page {
   size: A4;
   margin: 0;
@@ -1688,6 +1752,22 @@ textarea:focus-visible {
 
   .app-shell {
     display: block;
+  }
+
+  body.resume-print-export-active .app-shell {
+    display: none;
+  }
+
+  body.resume-print-export-active .print-safe-export-root {
+    position: static;
+    left: auto;
+    z-index: auto;
+    width: 210mm;
+    min-height: 0;
+    margin: 0;
+    overflow: visible;
+    visibility: visible;
+    pointer-events: auto;
   }
 
   .editor-panel,
@@ -1731,9 +1811,11 @@ textarea:focus-visible {
     height: 297mm;
     min-height: 297mm;
     margin: 0;
+    padding: 58px 64px;
     border: 0;
     box-shadow: none;
     overflow: hidden;
+    transform: none;
     color: #111827 !important;
     background: #ffffff !important;
     print-color-adjust: exact;

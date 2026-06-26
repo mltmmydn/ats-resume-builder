@@ -1,4 +1,5 @@
 import { Children, Component, isValidElement, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import './App.css'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '') || ''
@@ -432,33 +433,59 @@ class SafePaginatedPreview extends Component {
   }
 
   render() {
-    const { children, className = '', pageLabel } = this.props
+    const {
+      children,
+      className = '',
+      forcePagination = false,
+      pageLabel,
+      renderPrintSafeRoot = false,
+    } = this.props
 
     if (this.state.hasError) {
       return <SimplePreview className={className}>{children}</SimplePreview>
     }
 
     return (
-      <PaginatedPreview className={className} pageLabel={pageLabel}>
+      <PaginatedPreview
+        className={className}
+        forcePagination={forcePagination}
+        pageLabel={pageLabel}
+        renderPrintSafeRoot={renderPrintSafeRoot}
+      >
         {children}
       </PaginatedPreview>
     )
   }
 }
 
-function PaginatedPreview({ children, className = '', pageLabel }) {
-  if (isSafariLikeBrowser()) {
+function PaginatedPreview({
+  children,
+  className = '',
+  forcePagination = false,
+  pageLabel,
+  renderPrintSafeRoot = false,
+}) {
+  if (!forcePagination && isSafariLikeBrowser()) {
     return <SimplePreview className={className}>{children}</SimplePreview>
   }
 
   return (
-    <MeasuredPaginatedPreview className={className} pageLabel={pageLabel}>
+    <MeasuredPaginatedPreview
+      className={className}
+      pageLabel={pageLabel}
+      renderPrintSafeRoot={renderPrintSafeRoot}
+    >
       {children}
     </MeasuredPaginatedPreview>
   )
 }
 
-function MeasuredPaginatedPreview({ children, className = '', pageLabel }) {
+function MeasuredPaginatedPreview({
+  children,
+  className = '',
+  pageLabel,
+  renderPrintSafeRoot = false,
+}) {
   const blocks = Children.toArray(children).reduce((allBlocks, block, blockIndex) => {
     if (!isValidElement(block) || block.type !== PreviewSection) {
       allBlocks.push(block)
@@ -566,6 +593,47 @@ function MeasuredPaginatedPreview({ children, className = '', pageLabel }) {
     }
   }, [children])
 
+  const renderPageCards = (includePageLabels = true) => (
+    <div className="preview-page-cards">
+      {pages.map((page, pageIndex) => (
+        <div className="preview-page-shell" key={pageIndex}>
+          {includePageLabels && (
+            <span className="preview-page-label" aria-hidden="true">
+              {pageLabel} {pageIndex + 1}
+            </span>
+          )}
+          <article className={`resume-preview preview-page-card ${className}`.trim()}>
+            {page.map((blockIndex) => (
+              <div className="preview-page-block" key={blockIndex}>
+                {blocks[blockIndex]}
+              </div>
+            ))}
+          </article>
+        </div>
+      ))}
+    </div>
+  )
+
+  const printSafeRoot =
+    renderPrintSafeRoot && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            className="print-safe-export-root"
+            data-pagination-ready={paginationReady ? 'true' : 'false'}
+            aria-hidden="true"
+          >
+            <div
+              className={`resume-preview-stack ${
+                paginationReady ? 'pagination-ready' : ''
+              }`.trim()}
+            >
+              {renderPageCards(false)}
+            </div>
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
     <div className={`resume-preview-stack ${paginationReady ? 'pagination-ready' : ''}`.trim()}>
       <div
@@ -580,26 +648,13 @@ function MeasuredPaginatedPreview({ children, className = '', pageLabel }) {
         ))}
       </div>
 
-      <div className="preview-page-cards">
-        {pages.map((page, pageIndex) => (
-          <div className="preview-page-shell" key={pageIndex}>
-            <span className="preview-page-label" aria-hidden="true">
-              {pageLabel} {pageIndex + 1}
-            </span>
-            <article className={`resume-preview preview-page-card ${className}`.trim()}>
-              {page.map((blockIndex) => (
-                <div className="preview-page-block" key={blockIndex}>
-                  {blocks[blockIndex]}
-                </div>
-              ))}
-            </article>
-          </div>
-        ))}
-      </div>
+      {renderPageCards()}
 
       <article className={`resume-preview resume-print-preview ${className}`.trim()}>
         {children}
       </article>
+
+      {printSafeRoot}
     </div>
   )
 }
@@ -893,6 +948,7 @@ function App() {
   const [photoInputKey, setPhotoInputKey] = useState(0)
   const [theme, setTheme] = useState(getInitialTheme)
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
+  const [isPrintExporting, setIsPrintExporting] = useState(false)
   const [pdfError, setPdfError] = useState('')
   const t = (text) =>
     language === 'tr'
@@ -906,6 +962,26 @@ function App() {
       // The selected theme still works when browser storage is unavailable.
     }
   }, [theme])
+
+  useEffect(() => {
+    document.body.classList.toggle('resume-print-export-active', isPrintExporting)
+
+    return () => {
+      document.body.classList.remove('resume-print-export-active')
+    }
+  }, [isPrintExporting])
+
+  useEffect(() => {
+    if (!isPrintExporting) return undefined
+
+    const finishPrintExport = () => {
+      setIsPrintExporting(false)
+      setIsDownloadingPdf(false)
+    }
+
+    window.addEventListener('afterprint', finishPrintExport)
+    return () => window.removeEventListener('afterprint', finishPrintExport)
+  }, [isPrintExporting])
 
   const clearPhoto = () => {
     setProfilePhoto('')
@@ -1189,9 +1265,42 @@ function App() {
     }
   }
 
-  const downloadClientPdf = () => {
+  const waitForPrintSafePreview = () =>
+    new Promise((resolve) => {
+      let attempts = 0
+      const maxAttempts = 30
+
+      const checkForPages = () => {
+        const printSafePage = document.querySelector(
+          '.print-safe-export-root[data-pagination-ready="true"] .preview-page-card',
+        )
+
+        if (printSafePage || attempts >= maxAttempts) {
+          window.setTimeout(resolve, 80)
+          return
+        }
+
+        attempts += 1
+        window.requestAnimationFrame(checkForPages)
+      }
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(checkForPages)
+      })
+    })
+
+  const downloadClientPdf = async () => {
+    if (isDownloadingPdf) return
+
     setPdfError('')
+    setIsDownloadingPdf(true)
+    setIsPrintExporting(true)
+    await waitForPrintSafePreview()
     window.print()
+    window.setTimeout(() => {
+      setIsPrintExporting(false)
+      setIsDownloadingPdf(false)
+    }, 30000)
   }
 
   const populatedCustomFields = resume.personal.customFields.filter(
@@ -1276,8 +1385,9 @@ function App() {
                     type="button"
                     className="download-button"
                     onClick={downloadClientPdf}
+                    disabled={isDownloadingPdf}
                   >
-                    {t('Download PDF')}
+                    {t(isDownloadingPdf ? 'Generating PDF...' : 'Download PDF')}
                   </button>
                   <span>
                     {t(
@@ -1844,7 +1954,12 @@ function App() {
                 >
                   {t(isDownloadingPdf ? 'Generating PDF...' : 'Download PDF')}
                 </button>
-                <button type="button" className="print-button" onClick={() => window.print()}>
+                <button
+                  type="button"
+                  className="print-button"
+                  onClick={downloadClientPdf}
+                  disabled={isDownloadingPdf}
+                >
                   {t('Print')}
                 </button>
               </>
@@ -1853,8 +1968,9 @@ function App() {
                 type="button"
                 className="download-button"
                 onClick={downloadClientPdf}
+                disabled={isDownloadingPdf}
               >
-                {t('Download PDF')}
+                {t(isDownloadingPdf ? 'Generating PDF...' : 'Download PDF')}
               </button>
             )}
           </div>
@@ -1873,7 +1989,9 @@ function App() {
 
         <SafePaginatedPreview
           className={template === 'modern' ? 'modern-template' : ''}
+          forcePagination={isPrintExporting}
           pageLabel={t('Page')}
+          renderPrintSafeRoot={isPrintExporting}
         >
           <header className="resume-header">
             <div className="resume-header-content">
