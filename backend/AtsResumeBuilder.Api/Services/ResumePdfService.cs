@@ -17,7 +17,7 @@ public class ResumePdfService : IResumePdfService
     private const string SecondaryTextColor = "#374151";
     private const string HeadingTextColor = "#111827";
     private const string HeaderRuleColor = "#9CA3AF";
-    private const string SectionRuleColor = "#9CA3AF";
+    private const string SectionRuleColor = "#4B5563";
     private const float PxToPoint = 0.75f;
     private const float BaseFontSize = 9.4f;
     private const float ContactFontSize = 8.4f;
@@ -621,7 +621,7 @@ public class ResumePdfService : IResumePdfService
           margin: 0;
           font-size: 28px;
           line-height: 1.1;
-          font-weight: 500;
+          font-weight: 700;
           letter-spacing: 0;
           text-transform: uppercase;
         }
@@ -629,7 +629,7 @@ public class ResumePdfService : IResumePdfService
         .resume-title {
           margin: 6px 0 9px;
           font-size: 14.5px;
-          font-weight: 400;
+          font-weight: 700;
         }
 
         .contact-line {
@@ -668,11 +668,11 @@ public class ResumePdfService : IResumePdfService
         .resume-section > h2 {
           margin: 0 0 7.5px;
           padding-bottom: 3px;
-          border-bottom: 0.5px solid rgba(75, 85, 99, 0.58);
+          border-bottom: 1px solid #4b5563;
           color: #111827;
           font-size: 13.5px;
           line-height: 1.25;
-          font-weight: 500;
+          font-weight: 700;
           letter-spacing: 0.8px;
           text-transform: uppercase;
         }
@@ -707,7 +707,7 @@ public class ResumePdfService : IResumePdfService
           color: #111827;
           font-size: 12.5px;
           line-height: 1.4;
-          font-weight: 500;
+          font-weight: 700;
         }
 
         .entry-subtitle {
@@ -719,7 +719,7 @@ public class ResumePdfService : IResumePdfService
         .entry-date {
           flex: 0 0 auto;
           color: #111827;
-          font-weight: 500;
+          font-weight: 700;
           white-space: nowrap;
         }
 
@@ -770,7 +770,7 @@ public class ResumePdfService : IResumePdfService
 
         .resume-preview strong,
         .resume-preview b {
-          font-weight: 400;
+          font-weight: 700;
         }
         """;
 
@@ -991,7 +991,7 @@ public class ResumePdfService : IResumePdfService
 
         column.Item()
             .PaddingTop(9)
-            .BorderBottom(0.5f)
+            .BorderBottom(0.75f)
             .BorderColor(HeaderRuleColor);
     }
 
@@ -1005,7 +1005,7 @@ public class ResumePdfService : IResumePdfService
             .FontSize(HeaderNameFontSize)
             .LineHeight(1.1f)
             .FontColor(TextColor)
-            .Medium();
+            .Bold();
 
         if (!string.IsNullOrWhiteSpace(personalInfo?.JobTitle))
         {
@@ -1017,7 +1017,7 @@ public class ResumePdfService : IResumePdfService
                 .FontSize(HeaderTitleFontSize)
                 .LineHeight(1.2f)
                 .FontColor(TextColor)
-                .Medium();
+                .Bold();
         }
 
         var contactItems = BuildPrimaryContactItems(personalInfo).ToList();
@@ -1110,7 +1110,7 @@ public class ResumePdfService : IResumePdfService
                     left.Spacing(1 * PxToPoint);
 
                     if (HasText(experience.JobTitle))
-                        left.Item().Text(experience.JobTitle!).FontSize(BaseFontSize).FontColor(HeadingTextColor).Medium();
+                        left.Item().Text(experience.JobTitle!).FontSize(BaseFontSize).FontColor(HeadingTextColor).Bold();
 
                     var companyAndLocation = JoinNonEmpty(
                         experience.CompanyName,
@@ -1121,7 +1121,7 @@ public class ResumePdfService : IResumePdfService
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor).Medium();
+                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor).Bold();
             });
 
             var isFirstResponsibility = true;
@@ -1173,14 +1173,14 @@ public class ResumePdfService : IResumePdfService
                     left.Spacing(1 * PxToPoint);
 
                     if (HasText(item.SchoolName))
-                        left.Item().Text(item.SchoolName!).FontSize(BaseFontSize).FontColor(HeadingTextColor).Medium();
+                        left.Item().Text(item.SchoolName!).FontSize(BaseFontSize).FontColor(HeadingTextColor).Bold();
 
                     if (programAndGpa.Length > 0)
                         left.Item().Text(programAndGpa).FontSize(BaseFontSize).FontColor(SecondaryTextColor).Italic();
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor).Medium();
+                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor).Bold();
             });
 
             isFirstEntry = false;
@@ -1219,7 +1219,7 @@ public class ResumePdfService : IResumePdfService
                     left.Spacing(1 * PxToPoint);
 
                     if (HasText(volunteer.Role))
-                        left.Item().Text(volunteer.Role!).FontSize(BaseFontSize).FontColor(HeadingTextColor).Medium();
+                        left.Item().Text(volunteer.Role!).FontSize(BaseFontSize).FontColor(HeadingTextColor).Bold();
 
                     var organizationAndLocation = JoinNonEmpty(
                         volunteer.OrganizationName,
@@ -1230,7 +1230,7 @@ public class ResumePdfService : IResumePdfService
                 });
 
                 if (dateRange.Length > 0)
-                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor).Medium();
+                    row.ConstantItem(DateColumnWidth).AlignRight().Text(dateRange).FontSize(BaseFontSize).FontColor(HeadingTextColor).Bold();
             });
 
             var isFirstResponsibility = true;
@@ -1267,7 +1267,7 @@ public class ResumePdfService : IResumePdfService
                 .Text(project.ProjectName ?? string.Empty)
                 .FontSize(BaseFontSize)
                 .FontColor(HeadingTextColor)
-                .Medium();
+                .Bold();
 
             if (HasText(project.Description))
                 column.Item().Text(project.Description!);
@@ -1275,7 +1275,7 @@ public class ResumePdfService : IResumePdfService
             if (HasText(project.Technologies))
                 column.Item().Text(text =>
                 {
-                    text.Span("Technologies: ").FontSize(BaseFontSize).FontColor(HeadingTextColor).Medium();
+                    text.Span("Technologies: ").FontSize(BaseFontSize).FontColor(HeadingTextColor).Bold();
                     text.Span(project.Technologies!.Trim()).FontSize(BaseFontSize);
                 });
 
@@ -1313,7 +1313,7 @@ public class ResumePdfService : IResumePdfService
                     .PaddingBottom(1.5f)
                     .Text(text =>
                     {
-                        text.Span($"{category}: ").FontColor(HeadingTextColor).Medium();
+                        text.Span($"{category}: ").FontColor(HeadingTextColor).Bold();
                         text.Span(values);
                     });
 
@@ -1363,7 +1363,7 @@ public class ResumePdfService : IResumePdfService
                     var hasName = HasText(certificate.CertificateName);
 
                     if (hasName)
-                        text.Span($"\u2022 {certificate.CertificateName!.Trim()}").FontColor(HeadingTextColor).Medium();
+                        text.Span($"\u2022 {certificate.CertificateName!.Trim()}").FontColor(HeadingTextColor).Bold();
 
                     if (HasText(certificate.Issuer))
                         text.Span(hasName
@@ -1377,7 +1377,7 @@ public class ResumePdfService : IResumePdfService
                         .Text(certificate.Date!.Trim())
                         .FontSize(BaseFontSize)
                         .FontColor(HeadingTextColor)
-                        .Medium();
+                        .Bold();
             });
 
             var isFirstDetail = true;
@@ -1429,7 +1429,7 @@ public class ResumePdfService : IResumePdfService
                     .Text(heading)
                     .FontSize(BaseFontSize)
                     .FontColor(HeadingTextColor)
-                    .Medium();
+                    .Bold();
             }
 
             if (contact.Length > 0)
@@ -1444,13 +1444,13 @@ public class ResumePdfService : IResumePdfService
         column.Item()
             .PaddingTop(11.25f)
             .PaddingBottom(2.25f)
-            .BorderBottom(0.5f)
+            .BorderBottom(0.75f)
             .BorderColor(SectionRuleColor)
             .Text(heading)
             .FontSize(10.1f)
             .LineHeight(1.25f)
             .FontColor(HeadingTextColor)
-            .Medium();
+            .Bold();
     }
 
     private static byte[]? GetProfilePhoto(ResumeDto resume)
